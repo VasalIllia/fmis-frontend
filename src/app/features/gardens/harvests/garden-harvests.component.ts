@@ -1,6 +1,7 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, OnInit, inject, signal, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GardensService } from '../services/gardens.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -9,12 +10,12 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { GardenHarvestFormComponent } from '../components/harvest-form/garden-harvest-form.component';
-import { GARDEN_TYPE_OPTIONS } from '../../../shared/constants/garden.constants';
+import { GARDEN_TYPE_OPTIONS, GARDEN_UNIT_OPTIONS } from '../../../shared/constants/garden.constants';
 
 @Component({
   selector: 'app-garden-harvests',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PaginationComponent, ConfirmModalComponent, EmptyStateComponent, LoadingSpinnerComponent, GardenHarvestFormComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, PaginationComponent, ConfirmModalComponent, EmptyStateComponent, LoadingSpinnerComponent, GardenHarvestFormComponent],
   templateUrl: './garden-harvests.component.html'
 })
 export class GardenHarvestsComponent implements OnInit {
@@ -22,15 +23,15 @@ export class GardenHarvestsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private gardensService = inject(GardensService);
   private toastService = inject(ToastService);
+  private route = inject(ActivatedRoute);
 
   typeOptions = GARDEN_TYPE_OPTIONS;
+  unitOptions = GARDEN_UNIT_OPTIONS;
 
   activeGardens = signal<any[]>([]);
   harvests = signal<any[]>([]);
   loading = signal<boolean>(true);
   filterForm!: FormGroup;
-
-  currentYear = new Date().getFullYear();
 
   pageNumber = signal<number>(1);
   pageSize = signal<number>(10);
@@ -67,6 +68,7 @@ export class GardenHarvestsComponent implements OnInit {
   ngOnInit() {
     this.initFilterForm();
     this.initSellForm();
+    this.applyRouteFilters();
     this.loadActiveGardens();
     this.loadHarvests();
 
@@ -86,10 +88,21 @@ export class GardenHarvestsComponent implements OnInit {
     this.filterForm = this.fb.group({
       Search: [''],
       GardenId: [null],
-      GardenType: [null], // We use GardenType conceptually like CropType
-      Year: [this.currentYear],
-      IncludeAllYears: [true]
+      Unit: [null],
+      HarvestDateFrom: [null],
+      HarvestDateTo: [null]
     });
+  }
+
+  applyRouteFilters() {
+    const gardenId = this.route.snapshot.queryParamMap.get('GardenId');
+    if (!gardenId) return;
+
+    const parsedGardenId = Number(gardenId);
+    if (!Number.isFinite(parsedGardenId)) return;
+
+    this.filterForm.patchValue({ GardenId: parsedGardenId }, { emitEvent: false });
+    this.ensureGardenLoaded(parsedGardenId);
   }
 
   initSellForm() {
@@ -140,20 +153,31 @@ export class GardenHarvestsComponent implements OnInit {
     this.loadActiveGardens(true);
   }
 
+  ensureGardenLoaded(gardenId: number) {
+    if (this.activeGardens().some(g => g.id === gardenId)) return;
+
+    this.gardensService.getGardenById(gardenId).subscribe({
+      next: (garden) => {
+        if (!this.activeGardens().some(g => g.id === gardenId)) {
+          this.activeGardens.set([garden, ...this.activeGardens()]);
+        }
+      },
+      error: () => {}
+    });
+  }
+
   loadHarvests() {
     this.loading.set(true);
     const filters = this.filterForm.value;
     const query: any = {
-      Search: filters.Search,
-      GardenType: filters.GardenType || undefined,
-      Year: (!filters.IncludeAllYears && filters.Year) ? Number(filters.Year) : undefined,
-      IncludeAllYears: filters.IncludeAllYears || undefined,
+      Search: filters.Search || undefined,
+      GardenId: filters.GardenId || undefined,
+      Unit: filters.Unit || undefined,
+      HarvestDateFrom: filters.HarvestDateFrom || undefined,
+      HarvestDateTo: filters.HarvestDateTo || undefined,
       PageNumber: this.pageNumber(),
       PageSize: this.pageSize()
     };
-    if (filters.GardenId) {
-      query.GardenId = filters.GardenId;
-    }
 
     this.gardensService.getHarvests(query).subscribe({
       next: (res: any) => {
@@ -252,10 +276,6 @@ export class GardenHarvestsComponent implements OnInit {
         this.submittingDelete.set(false);
       }
     });
-  }
-
-  showAllYears() {
-    this.filterForm.patchValue({ IncludeAllYears: true });
   }
 
   changePage(page: number) {

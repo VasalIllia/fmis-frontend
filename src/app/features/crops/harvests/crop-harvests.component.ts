@@ -1,6 +1,7 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, OnInit, inject, signal, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CropsService } from '../services/crops.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -9,12 +10,12 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal/
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state.component';
 import { LoadingSpinnerComponent } from '../../../shared/components/loading-spinner/loading-spinner.component';
 import { HarvestFormComponent } from '../components/harvest-form/harvest-form.component';
-import { CROP_TYPE_OPTIONS } from '../../../shared/constants/crop.constants';
+import { CROP_TYPE_OPTIONS, CROP_HARVEST_UNIT_OPTIONS } from '../../../shared/constants/crop.constants';
 
 @Component({
   selector: 'app-crop-harvests',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, PaginationComponent, ConfirmModalComponent, EmptyStateComponent, LoadingSpinnerComponent, HarvestFormComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, PaginationComponent, ConfirmModalComponent, EmptyStateComponent, LoadingSpinnerComponent, HarvestFormComponent],
   templateUrl: './crop-harvests.component.html'
 })
 export class CropHarvestsComponent implements OnInit {
@@ -22,15 +23,15 @@ export class CropHarvestsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cropsService = inject(CropsService);
   private toastService = inject(ToastService);
+  private route = inject(ActivatedRoute);
 
   typeOptions = CROP_TYPE_OPTIONS;
+  unitOptions = CROP_HARVEST_UNIT_OPTIONS;
 
   activeCrops = signal<any[]>([]);
   harvests = signal<any[]>([]);
   loading = signal<boolean>(true);
   filterForm!: FormGroup;
-
-  currentYear = new Date().getFullYear();
 
   pageNumber = signal<number>(1);
   pageSize = signal<number>(10);
@@ -67,6 +68,7 @@ export class CropHarvestsComponent implements OnInit {
   ngOnInit() {
     this.initFilterForm();
     this.initSellForm();
+    this.applyRouteFilters();
     this.loadActiveCrops();
     this.loadHarvests();
 
@@ -86,10 +88,21 @@ export class CropHarvestsComponent implements OnInit {
     this.filterForm = this.fb.group({
       Search: [''],
       CropId: [null],
-      CropType: [null],
-      Year: [this.currentYear],
-      IncludeAllYears: [true]
+      Unit: [null],
+      HarvestDateFrom: [null],
+      HarvestDateTo: [null]
     });
+  }
+
+  applyRouteFilters() {
+    const cropId = this.route.snapshot.queryParamMap.get('CropId');
+    if (!cropId) return;
+
+    const parsedCropId = Number(cropId);
+    if (!Number.isFinite(parsedCropId)) return;
+
+    this.filterForm.patchValue({ CropId: parsedCropId }, { emitEvent: false });
+    this.ensureCropLoaded(parsedCropId);
   }
 
   initSellForm() {
@@ -140,20 +153,31 @@ export class CropHarvestsComponent implements OnInit {
     this.loadActiveCrops(true);
   }
 
+  ensureCropLoaded(cropId: number) {
+    if (this.activeCrops().some(c => c.id === cropId)) return;
+
+    this.cropsService.getCropById(cropId).subscribe({
+      next: (crop) => {
+        if (!this.activeCrops().some(c => c.id === cropId)) {
+          this.activeCrops.set([crop, ...this.activeCrops()]);
+        }
+      },
+      error: () => {}
+    });
+  }
+
   loadHarvests() {
     this.loading.set(true);
     const filters = this.filterForm.value;
     const query: any = {
-      Search: filters.Search,
-      CropType: filters.CropType || undefined,
-      Year: filters.Year ? Number(filters.Year) : undefined,
-      IncludeAllYears: filters.IncludeAllYears,
+      Search: filters.Search || undefined,
+      CropId: filters.CropId || undefined,
+      Unit: filters.Unit || undefined,
+      HarvestDateFrom: filters.HarvestDateFrom || undefined,
+      HarvestDateTo: filters.HarvestDateTo || undefined,
       PageNumber: this.pageNumber(),
       PageSize: this.pageSize()
     };
-    if (filters.CropId) {
-      query.CropId = filters.CropId;
-    }
 
     this.cropsService.getHarvests(query).subscribe({
       next: (res: any) => {
@@ -252,10 +276,6 @@ export class CropHarvestsComponent implements OnInit {
         this.submittingDelete.set(false);
       }
     });
-  }
-
-  showAllYears() {
-    this.filterForm.patchValue({ IncludeAllYears: true });
   }
 
   changePage(page: number) {

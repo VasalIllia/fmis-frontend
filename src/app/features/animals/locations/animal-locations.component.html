@@ -30,32 +30,54 @@
 
     <!-- Content -->
     <ng-container *ngIf="!loading()">
-      <section class="table-responsive" *ngIf="locations().length > 0; else emptyState">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Назва</th>
-              <th>Опис</th>
-              <th class="text-end">Дії</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let loc of locations()">
-              <td>#{{ loc.id }}</td>
-              <td><strong>{{ loc.name }}</strong></td>
-              <td><span class="text-muted text-truncate d-inline-block" style="max-width: 300px;">{{ loc.description || '—' }}</span></td>
-              <td class="text-end">
-                <button class="btn btn-sm btn-outline-primary me-2" (click)="openEditModal(loc)" title="Редагувати">
+      <section *ngIf="locations().length > 0; else emptyState">
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>ID</th>
+                <th>Назва</th>
+                <th>Опис</th>
+                <th class="text-end">Дії</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let loc of locations()">
+                <td>#{{ loc.id }}</td>
+                <td><strong>{{ loc.name }}</strong></td>
+                <td><span class="text-muted text-truncate d-inline-block" style="max-width: 300px;">{{ loc.description || '—' }}</span></td>
+                <td class="text-end">
+                  <button class="btn btn-sm btn-outline-primary me-2" (click)="openEditModal(loc)" title="Редагувати">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                  <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(loc)" title="Видалити">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="location-card-list d-md-none">
+          <article class="location-mobile-card" *ngFor="let loc of locations()">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+              <div class="min-w-0">
+                <div class="location-mobile-card__id">#{{ loc.id }}</div>
+                <div class="location-mobile-card__name">{{ loc.name }}</div>
+              </div>
+              <div class="d-inline-flex gap-2 flex-shrink-0">
+                <button class="btn btn-sm btn-outline-primary" (click)="openEditModal(loc)" title="Редагувати">
                   <i class="bi bi-pencil"></i>
                 </button>
                 <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(loc)" title="Видалити">
                   <i class="bi bi-trash"></i>
                 </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </div>
+            </div>
+            <p class="location-mobile-card__description mb-0 mt-2">{{ loc.description || '—' }}</p>
+          </article>
+        </div>
 
         <!-- Pagination -->
         <app-pagination

@@ -2,8 +2,12 @@
   <!-- Breadcrumb navigation -->
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb mb-3">
-      <li class="breadcrumb-item"><a routerLink="/gardens" class="text-decoration-none text-success">Садівництво</a></li>
-      <li class="breadcrumb-item active" aria-current="page">{{ garden()?.name || 'Деталі ділянки' }}</li>
+      <li class="breadcrumb-item">
+        <a routerLink="/gardens" class="text-decoration-none text-success">Садівництво</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        {{ garden()?.name || 'Деталі ділянки' }}
+      </li>
     </ol>
   </nav>
 
@@ -12,7 +16,7 @@
 
   <ng-template #detailsTpl>
     <div *ngIf="!garden()" class="text-center py-5 bg-white border rounded-3">
-      <i class="bi bi-exclamation-octagon text-danger" style="font-size: 3rem;"></i>
+      <i class="bi bi-exclamation-octagon text-danger" style="font-size: 3rem"></i>
       <h4 class="mt-3 text-dark">Посадку не знайдено</h4>
       <p class="text-muted">Можливо, запис було вилучено або посилання недійсне.</p>
       <a routerLink="/gardens" class="btn btn-primary-custom mt-2">Повернутися до списку</a>
@@ -27,15 +31,19 @@
         <i class="bi bi-exclamation-triangle-fill fs-4"></i>
         <div>
           <h6 class="fw-bold mb-1">Увага! Наближається або минув термін збору врожаю</h6>
-          <p class="mb-0" style="font-size: 0.9rem;">
-            Очікувана дата збору ({{ garden()?.expectedHarvestDate | date:'yyyy-MM-dd' }}) минула, проте саджанці досі у статусі розвитку ("Заплановано" або "Росте"). Будь ласка, оновіть статус або внесіть зібраний врожай.
+          <p class="mb-0" style="font-size: 0.9rem">
+            Очікувана дата збору ({{ garden()?.expectedHarvestDate | date: 'yyyy-MM-dd' }}) минула,
+            проте саджанці досі у статусі розвитку ("Заплановано" або "Росте"). Будь ласка, оновіть
+            статус або внесіть зібраний врожай.
           </p>
         </div>
       </div>
 
       <!-- Header Card -->
       <section class="card-custom mb-4 p-4">
-        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div
+          class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+        >
           <div>
             <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
               <h2 class="fw-bold text-dark mb-0">{{ garden()?.name }}</h2>
@@ -46,15 +54,19 @@
                 {{ getTypeLabel(garden()?.type!) }}
               </span>
             </div>
-            <div class="text-secondary" style="font-size: 0.95rem;">
-              Локація/Ділянка: <strong>{{ getLocationName(garden()?.locationId!) }}</strong> · 
-              Кількість: <strong>{{ garden()?.quantity }} {{ getUnitLabel(garden()?.unit!) }}</strong>
+            <div class="text-secondary" style="font-size: 0.95rem">
+              Локація/Ділянка: <strong>{{ getLocationName(garden()?.locationId!) }}</strong> ·
+              Кількість:
+              <strong>{{ garden()?.quantity }} {{ getUnitLabel(garden()?.unit!) }}</strong>
             </div>
           </div>
 
           <!-- Main Actions -->
           <div class="d-flex flex-wrap gap-2">
-            <button class="btn btn-outline-primary d-flex align-items-center gap-2" (click)="openEditDrawer()">
+            <button
+              class="btn btn-outline-primary d-flex align-items-center gap-2"
+              (click)="openEditDrawer()"
+            >
               <i class="bi bi-pencil"></i> Змінити
             </button>
             <button
@@ -64,7 +76,10 @@
             >
               <i class="bi bi-gift"></i> Зібрати врожай
             </button>
-            <button class="btn btn-outline-danger d-flex align-items-center gap-2" (click)="confirmDelete()">
+            <button
+              class="btn btn-outline-danger d-flex align-items-center gap-2"
+              (click)="confirmDelete()"
+            >
               <i class="bi bi-trash"></i> Вилучити
             </button>
           </div>
@@ -105,12 +120,14 @@
               <table class="table table-borderless align-middle mb-0">
                 <tbody>
                   <tr>
-                    <td class="text-secondary ps-0 py-2" style="width: 200px;">Культура:</td>
+                    <td class="text-secondary ps-0 py-2" style="width: 200px">Культура:</td>
                     <td class="fw-semibold text-dark py-2">{{ getTypeLabel(garden()!.type) }}</td>
                   </tr>
                   <tr>
                     <td class="text-secondary ps-0 py-2">Кількість саджанців / площа:</td>
-                    <td class="fw-bold text-dark py-2">{{ garden()?.quantity }} {{ getUnitLabel(garden()!.unit) }}</td>
+                    <td class="fw-bold text-dark py-2">
+                      {{ garden()?.quantity }} {{ getUnitLabel(garden()!.unit) }}
+                    </td>
                   </tr>
                   <tr>
                     <td class="text-secondary ps-0 py-2">Локація / Сектор:</td>
@@ -124,7 +141,7 @@
               <table class="table table-borderless align-middle mb-0">
                 <tbody>
                   <tr>
-                    <td class="text-secondary ps-0 py-2" style="width: 200px;">Статус розвитку:</td>
+                    <td class="text-secondary ps-0 py-2" style="width: 200px">Статус розвитку:</td>
                     <td class="py-2">
                       <span [ngClass]="getStatusClass(garden()?.status!)">
                         {{ getStatusLabel(garden()?.status!) }}
@@ -133,11 +150,15 @@
                   </tr>
                   <tr>
                     <td class="text-secondary ps-0 py-2">Дата посадки:</td>
-                    <td class="py-2 fw-semibold">{{ garden()?.plantingDate | date:'yyyy-MM-dd' }}</td>
+                    <td class="py-2 fw-semibold">
+                      {{ garden()?.plantingDate | date: 'yyyy-MM-dd' }}
+                    </td>
                   </tr>
                   <tr>
                     <td class="text-secondary ps-0 py-2">Очікуваний збір врожаю:</td>
-                    <td class="py-2 fw-semibold text-success">{{ garden()?.expectedHarvestDate | date:'yyyy-MM-dd' }}</td>
+                    <td class="py-2 fw-semibold text-success">
+                      {{ garden()?.expectedHarvestDate | date: 'yyyy-MM-dd' }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -150,21 +171,59 @@
               </div>
             </div>
 
-            <div class="col-12 text-muted" style="font-size: 0.8rem; margin-top: 40px;">
-              Створено в системі: <strong>{{ garden()?.createdAt | date:'yyyy-MM-dd' }}</strong>
-              <span *ngIf="garden()?.updatedAt"> · Оновлено: <strong>{{ garden()?.updatedAt | date:'yyyy-MM-dd' }}</strong></span>
+            <div class="col-12 text-muted" style="font-size: 0.8rem; margin-top: 40px">
+              Створено в системі: <strong>{{ garden()?.createdAt | date: 'yyyy-MM-dd' }}</strong>
+              <span *ngIf="garden()?.updatedAt">
+                · Оновлено: <strong>{{ garden()?.updatedAt | date: 'yyyy-MM-dd' }}</strong></span
+              >
             </div>
           </div>
         </section>
 
         <!-- Tab 2: Harvests -->
         <section *ngSwitchCase="'harvests'">
+          <div class="card-custom mb-4">
+            <form [formGroup]="harvestFilterForm" class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium" style="font-size: 0.85rem"
+                  >Пошук</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Пошук врожаю..."
+                  formControlName="Search"
+                />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label text-secondary fw-medium" style="font-size: 0.85rem"
+                  >Одиниця</label
+                >
+                <select class="form-select" formControlName="Unit">
+                  <option [ngValue]="null">Всі</option>
+                  <option *ngFor="let u of unitOptions" [value]="u.value">{{ u.label }}</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
+                  >З дати</label
+                >
+                <input type="date" class="form-control" formControlName="HarvestDateFrom" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
+                  >По дату</label
+                >
+                <input type="date" class="form-control" formControlName="HarvestDateTo" />
+              </div>
+            </form>
+          </div>
           <!-- Harvest List -->
           <app-loading-spinner *ngIf="loadingHarvests(); else harvestListTpl" />
 
           <ng-template #harvestListTpl>
             <div *ngIf="harvests().length === 0" class="text-center py-5 bg-white rounded border">
-              <i class="bi bi-box text-muted" style="font-size: 3rem;"></i>
+              <i class="bi bi-box text-muted" style="font-size: 3rem"></i>
               <h5 class="mt-3 text-dark">Врожаїв ще не зібрано</h5>
               <p class="text-muted">Зареєструйте перший збір врожаю для цієї ділянки.</p>
               <button class="btn btn-primary-custom" (click)="openHarvestDrawer()">
@@ -172,45 +231,127 @@
               </button>
             </div>
 
-            <div *ngIf="harvests().length > 0" class="card-custom p-0 overflow-hidden">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th class="ps-4">Зібрана вага / кількість</th>
-                      <th>Одиниця</th>
-                      <th>Дата збору</th>
-                      <th>Опис / Якість</th>
-                      <th class="text-end pe-4">Дії</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let harv of harvests()">
-                      <td class="ps-4 fw-bold text-dark">{{ harv.quantity }}</td>
-                      <td>{{ getUnitLabel(harv.unit) }}</td>
-                      <td>{{ harv.harvestDate | date:'yyyy-MM-dd' }}</td>
-                      <td class="text-secondary">{{ harv.description || '—' }}</td>
-                      <td class="text-end pe-4">
-                        <div class="d-inline-flex gap-2">
+            <div *ngIf="harvests().length > 0">
+              <!-- Desktop Table View -->
+              <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="ps-4">Зібрана вага / кількість</th>
+                        <th>Одиниця</th>
+                        <th>Дата збору</th>
+                        <th>Опис / Якість</th>
+                        <th class="text-end pe-4">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let harv of harvests()">
+                        <td class="ps-4 fw-bold text-dark">{{ harv.quantity }}</td>
+                        <td>{{ getUnitLabel(harv.unit) }}</td>
+                        <td>{{ harv.harvestDate | date: 'yyyy-MM-dd' }}</td>
+                        <td class="text-secondary">{{ harv.description || '—' }}</td>
+                        <td class="text-end pe-4">
+                          <div class="d-inline-flex gap-2">
+                            <button
+                              class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                              [disabled]="harv.quantity <= 0"
+                              (click)="openSellModal(harv)"
+                              title="Продати врожай"
+                            >
+                              <i class="bi bi-currency-dollar"></i> Продати
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="openHarvestDrawer(harv.id)"
+                              title="Редагувати"
+                            >
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline-danger"
+                              (click)="confirmDeleteHarvest(harv)"
+                              title="Видалити"
+                            >
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile Cards Layout -->
+              <div class="d-md-none d-flex flex-column gap-3">
+                <article class="card-custom p-3 shadow-sm" *ngFor="let harv of harvests()">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h5 class="fw-bold text-dark mb-1">Збір плодів</h5>
+                      <span class="badge bg-light text-dark border">
+                        {{ getUnitLabel(harv.unit) }}
+                      </span>
+                    </div>
+                    <div class="dropdown flex-shrink-0">
+                      <button
+                        class="btn btn-link text-muted p-0"
+                        type="button"
+                        (click)="toggleMobileMenu(harv.id, $event)"
+                      >
+                        <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end"
+                        [class.show]="activeMobileMenuId() === harv.id"
+                        style="right: 0; left: auto"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
                           <button
-                            class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                            class="dropdown-item text-success"
                             [disabled]="harv.quantity <= 0"
-                            (click)="openSellModal(harv)"
-                            title="Продати врожай"
+                            (click)="openSellModal(harv); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-currency-dollar"></i> Продати
+                            <i class="bi bi-currency-dollar me-2"></i> Продати
                           </button>
-                          <button class="btn btn-sm btn-outline-primary" (click)="openHarvestDrawer(harv.id)" title="Редагувати">
-                            <i class="bi bi-pencil"></i>
+                        </li>
+                        <li>
+                          <button
+                            class="dropdown-item"
+                            (click)="openHarvestDrawer(harv.id); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-pencil me-2"></i> Редагувати
                           </button>
-                          <button class="btn btn-sm btn-outline-danger" (click)="confirmDeleteHarvest(harv)" title="Видалити">
-                            <i class="bi bi-trash"></i>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                          <button
+                            class="dropdown-item text-danger"
+                            (click)="confirmDeleteHarvest(harv); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-trash me-2"></i> Видалити
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div
+                    class="row g-2 pt-2 border-top text-secondary small"
+                    style="font-size: 0.85rem"
+                  >
+                    <div class="col-6">
+                      <strong>Кількість:</strong> {{ harv.quantity }} {{ getUnitLabel(harv.unit) }}
+                    </div>
+                    <div class="col-6">
+                      <strong>Дата:</strong> {{ harv.harvestDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-12 text-truncate" *ngIf="harv.description">
+                      <strong>Опис:</strong> {{ harv.description }}
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </ng-template>
@@ -242,7 +383,9 @@
   <app-confirm-modal
     [isOpen]="isDeleteConfirmOpen()"
     title="Вилучити посадку"
-    [message]="'Ви впевнені, що хочете видалити посадку <strong>' + (garden()?.name || '') + '</strong>?'"
+    [message]="
+      'Ви впевнені, що хочете видалити посадку <strong>' + (garden()?.name || '') + '</strong>?'
+    "
     warning="Ця дія також вилучить всю історію зборів врожаю для цієї посадки!"
     confirmText="Видалити"
     [submitting]="submitting()"
@@ -254,7 +397,11 @@
   <app-confirm-modal
     [isOpen]="isDeleteHarvestConfirmOpen()"
     title="Вилучити запис врожаю"
-    [message]="'Ви впевнені, що хочете видалити цей запис збору врожаю від ' + (harvestToDelete()?.harvestDate | date:'yyyy-MM-dd') + '?'"
+    [message]="
+      'Ви впевнені, що хочете видалити цей запис збору врожаю від ' +
+      (harvestToDelete()?.harvestDate | date: 'yyyy-MM-dd') +
+      '?'
+    "
     confirmText="Видалити"
     [submitting]="submittingHarvest()"
     (confirm)="onDeleteHarvest()"
@@ -262,23 +409,37 @@
   />
 
   <!-- Sell Harvest Modal -->
-  <div *ngIf="isSellModalOpen()" class="modal fade show d-block" tabindex="-1" style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060;">
+  <div
+    *ngIf="isSellModalOpen()"
+    class="modal fade show d-block"
+    tabindex="-1"
+    style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060"
+  >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content border-0 shadow-lg">
         <header class="modal-header border-bottom bg-success text-white">
           <h5 class="modal-title fw-bold">Продати врожай</h5>
-          <button type="button" class="btn-close btn-close-white" (click)="closeSellModal()" [disabled]="submittingSell()"></button>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            (click)="closeSellModal()"
+            [disabled]="submittingSell()"
+          ></button>
         </header>
         <form [formGroup]="sellForm" (ngSubmit)="onSubmitSell()">
           <div class="modal-body py-4">
-            <div class="alert alert-info border-0 py-2" style="font-size: 0.9rem;">
-              <strong>Садова культура:</strong> {{ garden()?.name }} <br/>
-              <strong>Зібрана партія:</strong> {{ sellHarvestContext()?.harvestDate | date:'yyyy-MM-dd' }} <br/>
-              <strong>В наявності для продажу:</strong> {{ sellHarvestContext()?.quantity }} {{ getUnitLabel(sellHarvestContext()?.unit!) }}
+            <div class="alert alert-info border-0 py-2" style="font-size: 0.9rem">
+              <strong>Садова культура:</strong> {{ garden()?.name }} <br />
+              <strong>Зібрана партія:</strong>
+              {{ sellHarvestContext()?.harvestDate | date: 'yyyy-MM-dd' }} <br />
+              <strong>В наявності для продажу:</strong> {{ sellHarvestContext()?.quantity }}
+              {{ getUnitLabel(sellHarvestContext()?.unit!) }}
             </div>
 
             <div class="mb-3">
-              <label for="sellQty" class="form-label fw-semibold">Кількість для продажу <span class="text-danger">*</span></label>
+              <label for="sellQty" class="form-label fw-semibold"
+                >Кількість для продажу <span class="text-danger">*</span></label
+              >
               <input
                 type="number"
                 id="sellQty"
@@ -286,15 +447,20 @@
                 formControlName="quantity"
                 min="0.001"
                 step="any"
-                [class.is-invalid]="sellForm.get('quantity')?.touched && sellForm.get('quantity')?.invalid"
+                [class.is-invalid]="
+                  sellForm.get('quantity')?.touched && sellForm.get('quantity')?.invalid
+                "
               />
               <div class="invalid-feedback">
-                Введіть коректну кількість. Максимально доступно: {{ sellHarvestContext()?.quantity }}
+                Введіть коректну кількість. Максимально доступно:
+                {{ sellHarvestContext()?.quantity }}
               </div>
             </div>
 
             <div class="mb-3">
-              <label for="sellPrice" class="form-label fw-semibold">Ціна за одиницю (₴) <span class="text-danger">*</span></label>
+              <label for="sellPrice" class="form-label fw-semibold"
+                >Ціна за одиницю (₴) <span class="text-danger">*</span></label
+              >
               <input
                 type="number"
                 id="sellPrice"
@@ -302,19 +468,25 @@
                 formControlName="unitPrice"
                 min="0.01"
                 step="any"
-                [class.is-invalid]="sellForm.get('unitPrice')?.touched && sellForm.get('unitPrice')?.invalid"
+                [class.is-invalid]="
+                  sellForm.get('unitPrice')?.touched && sellForm.get('unitPrice')?.invalid
+                "
               />
               <div class="invalid-feedback">Ціна повинна бути більше нуля.</div>
             </div>
 
             <div class="mb-3">
-              <label for="sellDate" class="form-label fw-semibold">Дата продажу <span class="text-danger">*</span></label>
+              <label for="sellDate" class="form-label fw-semibold"
+                >Дата продажу <span class="text-danger">*</span></label
+              >
               <input
                 type="date"
                 id="sellDate"
                 class="form-control"
                 formControlName="soldAt"
-                [class.is-invalid]="sellForm.get('soldAt')?.touched && sellForm.get('soldAt')?.invalid"
+                [class.is-invalid]="
+                  sellForm.get('soldAt')?.touched && sellForm.get('soldAt')?.invalid
+                "
               />
               <div class="invalid-feedback">Введіть дату продажу.</div>
             </div>
@@ -331,9 +503,25 @@
             </div>
           </div>
           <footer class="modal-footer border-top">
-            <button type="button" class="btn btn-outline-secondary" (click)="closeSellModal()" [disabled]="submittingSell()">Скасувати</button>
-            <button type="submit" class="btn btn-success d-flex align-items-center gap-2" [disabled]="sellForm.invalid || submittingSell()">
-              <span *ngIf="submittingSell()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="closeSellModal()"
+              [disabled]="submittingSell()"
+            >
+              Скасувати
+            </button>
+            <button
+              type="submit"
+              class="btn btn-success d-flex align-items-center gap-2"
+              [disabled]="sellForm.invalid || submittingSell()"
+            >
+              <span
+                *ngIf="submittingSell()"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
               Продати
             </button>
           </footer>
@@ -341,5 +529,4 @@
       </div>
     </div>
   </div>
-
 </div>

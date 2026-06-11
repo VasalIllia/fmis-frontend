@@ -39,6 +39,9 @@ export class GardensComponent implements OnInit {
   pageSize = signal<number>(10);
   totalCount = signal<number>(0);
   totalPages = signal<number>(0);
+  locationPage = 1;
+  hasMoreLocations = signal<boolean>(true);
+  loadingMoreLocations = signal<boolean>(false);
   activeMobileMenuId = signal<number | null>(null);
 
   isFormDrawerOpen = signal<boolean>(false);
@@ -93,10 +96,33 @@ export class GardensComponent implements OnInit {
     });
   }
 
-  loadLocations() {
-    this.gardensService.getGardenLocations().subscribe({
-      next: (res) => this.locations.set(res.items || []),
-      error: () => {}});
+  loadLocations(append = false) {
+    if (this.loadingMoreLocations()) return;
+    this.loadingMoreLocations.set(true);
+
+    this.gardensService.getGardenLocations({ PageNumber: this.locationPage, PageSize: 10 }).subscribe({
+      next: (res) => {
+        const newItems = res.items || [];
+        this.locations.set(append ? [...this.locations(), ...newItems] : newItems);
+        this.hasMoreLocations.set(this.locationPage < (res.totalPages || 1) && newItems.length >= 10);
+        this.loadingMoreLocations.set(false);
+      },
+      error: () => {
+        this.loadingMoreLocations.set(false);
+      }
+    });
+  }
+
+  loadMoreLocations() {
+    this.locationPage++;
+    this.loadLocations(true);
+  }
+
+  getSelectedLocationName(): string | null {
+    const id = this.filterForm.get('LocationId')?.value;
+    if (!id) return null;
+    const loc = this.locations().find(l => l.id === Number(id));
+    return loc ? loc.name : `Локація #${id}`;
   }
 
   loadGardens() {

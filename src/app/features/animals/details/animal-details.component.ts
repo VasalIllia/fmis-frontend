@@ -1,5 +1,5 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, signal, DestroyRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -46,6 +46,25 @@ export class AnimalDetailsComponent implements OnInit {
   submitting = signal<boolean>(false);
 
   activeTab = signal<'overview' | 'products' | 'matings' | 'medical'>('overview');
+  activeMobileMenuId = signal<number | null>(null);
+  expandedMatingId = signal<number | null>(null);
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.activeMobileMenuId.set(null);
+  }
+
+  toggleMobileMenu(id: number, event: Event) {
+    event.stopPropagation();
+    this.activeMobileMenuId.set(this.activeMobileMenuId() === id ? null : id);
+  }
+
+  toggleExpandMating(id: number, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedMatingId.set(this.expandedMatingId() === id ? null : id);
+  }
 
   // Animal Edit Drawer states
   isEditDrawerOpen = signal<boolean>(false);
@@ -101,8 +120,8 @@ export class AnimalDetailsComponent implements OnInit {
     this.productFilterForm = this.fb.group({
       Search: [''],
       Unit: [null],
-      Year: [null],
-            IncludeAllYears: [true]
+      DateFrom: [null],
+      DateTo: [null]
     });
   }
 
@@ -259,10 +278,10 @@ export class AnimalDetailsComponent implements OnInit {
     this.loadingProducts.set(true);
     const filters = this.productFilterForm.value;
     const query = {
-      Search: filters.Search,
-      Unit: filters.Unit,
-      Year: filters.Year ? Number(filters.Year) : undefined,
-      IncludeAllYears: filters.IncludeAllYears,
+      Search: filters.Search || undefined,
+      Unit: filters.Unit || undefined,
+      DateFrom: filters.DateFrom || undefined,
+      DateTo: filters.DateTo || undefined,
       PageSize: 100
     };
 

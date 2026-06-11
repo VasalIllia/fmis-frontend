@@ -254,10 +254,57 @@
               <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
                 >Локація</label
               >
-              <select class="form-select" formControlName="LocationId">
-                <option [ngValue]="null">Всі локації</option>
-                <option *ngFor="let loc of locations()" [value]="loc.id">{{ loc.name }}</option>
-              </select>
+              <div class="dropdown">
+                <button
+                  class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  style="border-color: #dee2e6"
+                >
+                  <span class="text-truncate">{{ getSelectedLocationName() || 'Всі локації' }}</span>
+                </button>
+                <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto">
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      (click)="filterForm.patchValue({ LocationId: null })"
+                    >
+                      <span class="text-muted">Всі локації</span>
+                    </a>
+                  </li>
+                  <li *ngIf="locations().length > 0"><hr class="dropdown-divider" /></li>
+                  <li *ngFor="let loc of locations()">
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      (click)="filterForm.patchValue({ LocationId: loc.id })"
+                      [class.active]="filterForm.get('LocationId')?.value === loc.id"
+                    >
+                      {{ loc.name }}
+                    </a>
+                  </li>
+                  <li *ngIf="hasMoreLocations()">
+                    <hr class="dropdown-divider" />
+                    <div class="px-2 py-1">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center"
+                        (click)="loadMoreLocations(); $event.stopPropagation()"
+                        [disabled]="loadingMoreLocations()"
+                      >
+                        <span
+                          *ngIf="loadingMoreLocations()"
+                          class="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        ></span>
+                        Завантажити ще 10...
+                      </button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
             </div>
             <!-- Type -->
             <div>

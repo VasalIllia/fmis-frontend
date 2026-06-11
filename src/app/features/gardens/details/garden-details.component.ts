@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -24,6 +25,7 @@ export class GardenDetailsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private gardensService = inject(GardensService);
   private toastService = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   gardenId!: number;
   garden = signal<GardenDto | null>(null);
@@ -32,6 +34,7 @@ export class GardenDetailsComponent implements OnInit {
   submitting = signal<boolean>(false);
 
   activeTab = signal<'overview' | 'harvests'>('overview');
+  activeMobileMenuId = signal<number | null>(null);
 
   // Edit Garden Drawer state
   isEditDrawerOpen = signal<boolean>(false);
@@ -39,6 +42,7 @@ export class GardenDetailsComponent implements OnInit {
   // Harvests Tab states
   harvests = signal<GardenHarvestDto[]>([]);
   loadingHarvests = signal<boolean>(false);
+  harvestFilterForm!: FormGroup;
   isHarvestDrawerOpen = signal<boolean>(false);
   editingHarvestId = signal<number | null>(null);
   isDeleteHarvestConfirmOpen = signal<boolean>(false);
@@ -57,11 +61,37 @@ export class GardenDetailsComponent implements OnInit {
   statusOptions = GARDEN_STATUS_OPTIONS;
   unitOptions = GARDEN_UNIT_OPTIONS;
 
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.activeMobileMenuId.set(null);
+  }
+
+  toggleMobileMenu(id: number, event: Event) {
+    event.stopPropagation();
+    this.activeMobileMenuId.set(this.activeMobileMenuId() === id ? null : id);
+  }
+
   ngOnInit() {
     this.gardenId = Number(this.route.snapshot.paramMap.get('id'));
     this.initSellForm();
+    this.initHarvestFilterForm();
     this.loadLocations();
     this.loadGarden();
+
+    this.harvestFilterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.activeTab() === 'harvests') {
+        this.loadHarvests();
+      }
+    });
+  }
+
+  initHarvestFilterForm() {
+    this.harvestFilterForm = this.fb.group({
+      Search: [''],
+      Unit: [null],
+      HarvestDateFrom: [null],
+      HarvestDateTo: [null]
+    });
   }
 
   initSellForm() {
@@ -158,7 +188,16 @@ export class GardenDetailsComponent implements OnInit {
   // --- Harvests controls ---
   loadHarvests() {
     this.loadingHarvests.set(true);
-    this.gardensService.getHarvests({ GardenId: this.gardenId, PageSize: 100 }).subscribe({
+    const filters = this.harvestFilterForm.value;
+
+    this.gardensService.getHarvests({
+      GardenId: this.gardenId,
+      Search: filters.Search || undefined,
+      Unit: filters.Unit || undefined,
+      HarvestDateFrom: filters.HarvestDateFrom || undefined,
+      HarvestDateTo: filters.HarvestDateTo || undefined,
+      PageSize: 100
+    }).subscribe({
       next: (res: any) => {
         this.harvests.set(res.items || []);
         this.loadingHarvests.set(false);

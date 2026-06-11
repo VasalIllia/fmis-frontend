@@ -51,8 +51,9 @@
       />
 
       <!-- Matings List -->
-      <div *ngIf="matings().length > 0" class="card-custom p-0 overflow-hidden">
-        <div class="table-responsive">
+      <div *ngIf="matings().length > 0">
+        <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+          <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
               <tr>
@@ -62,6 +63,7 @@
                 <th>Очікувані пологи</th>
                 <th>Фактичні пологи</th>
                 <th>Статус</th>
+                <th>Опис</th>
                 <th class="text-end pe-4">Дії</th>
               </tr>
             </thead>
@@ -93,6 +95,9 @@
                     {{ getMatingStatusLabel(mating.status) }}
                   </span>
                 </td>
+                <td class="text-secondary text-truncate" style="max-width: 150px;" [title]="mating.description || ''">
+                  {{ mating.description || '—' }}
+                </td>
                 <td class="text-end pe-4">
                   <div class="d-inline-flex gap-2">
                     <button
@@ -115,6 +120,99 @@
             </tbody>
           </table>
         </div>
+      </div>
+
+      <!-- Mobile Cards Layout -->
+      <div class="d-md-none d-flex flex-column gap-3 mt-3">
+        <article class="card-custom p-3 shadow-sm" *ngFor="let mating of matings()">
+          <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+              <h5 class="fw-bold text-dark mb-1">Спарювання</h5>
+              <span [ngClass]="getMatingStatusClass(mating.status)">
+                {{ getMatingStatusLabel(mating.status) }}
+              </span>
+            </div>
+            <div class="dropdown">
+              <button
+                class="btn btn-link text-muted p-0"
+                type="button"
+                (click)="toggleMobileMenu(mating.id, $event)"
+              >
+                <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+              </button>
+              <ul
+                class="dropdown-menu dropdown-menu-end"
+                [class.show]="activeMobileMenuId() === mating.id"
+                style="right: 0; left: auto"
+                (click)="$event.stopPropagation()"
+              >
+                <li>
+                  <button
+                    class="dropdown-item"
+                    (click)="toggleExpandMating(mating.id, $event); activeMobileMenuId.set(null)"
+                  >
+                    <i class="bi bi-eye me-2"></i> Деталі
+                  </button>
+                </li>
+                <li>
+                  <button
+                    class="dropdown-item"
+                    (click)="openMatingDrawer(mating.id); activeMobileMenuId.set(null)"
+                  >
+                    <i class="bi bi-pencil me-2"></i> Редагувати
+                  </button>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <button
+                    class="dropdown-item text-danger"
+                    (click)="confirmDelete(mating); activeMobileMenuId.set(null)"
+                  >
+                    <i class="bi bi-trash me-2"></i> Видалити
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="row g-2 pt-2 border-top text-secondary small" style="font-size: 0.85rem">
+            <div class="col-6">
+              <strong>Мати:</strong> 
+              <a [routerLink]="['/animals', mating.femaleAnimalId]" class="text-decoration-none text-success fw-semibold">
+                {{ getAnimalNameFromId(mating.femaleAnimalId) }}
+              </a>
+            </div>
+            <div class="col-6">
+              <strong>Батько:</strong>
+              <a [routerLink]="['/animals', mating.maleAnimalId]" class="text-decoration-none text-success fw-semibold">
+                {{ getAnimalNameFromId(mating.maleAnimalId) }}
+              </a>
+            </div>
+            <div class="col-6">
+              <strong>Дата:</strong> {{ mating.matingDate | date: 'yyyy-MM-dd' }}
+            </div>
+            <div class="col-6">
+              <strong>Очік. пологи:</strong> {{ mating.expectedBirthDate | date: 'yyyy-MM-dd' }}
+            </div>
+            <div class="col-12" *ngIf="mating.actualBirthDate">
+              <strong>Факт. пологи:</strong> {{ mating.actualBirthDate | date: 'yyyy-MM-dd' }}
+            </div>
+          </div>
+
+          <!-- Collapsible Description -->
+          <div
+            class="mt-2 text-secondary small pt-2 border-top"
+            [style.max-height]="expandedMatingId() === mating.id ? 'none' : '40px'"
+            [style.overflow]="expandedMatingId() === mating.id ? 'visible' : 'hidden'"
+            [style.display]="expandedMatingId() === mating.id ? 'block' : '-webkit-box'"
+            [style.-webkit-line-clamp]="expandedMatingId() === mating.id ? 'unset' : '2'"
+            [style.-webkit-box-orient]="expandedMatingId() === mating.id ? 'unset' : 'vertical'"
+            style="font-size: 0.85rem"
+          >
+            <strong>Опис:</strong> <span class="whitespace-pre-wrap">{{ mating.description || '—' }}</span>
+          </div>
+        </article>
+      </div>
       </div>
     </ng-template>
 

@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, OnInit, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -25,6 +26,7 @@ export class CropDetailsComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cropsService = inject(CropsService);
   private toastService = inject(ToastService);
+  private destroyRef = inject(DestroyRef);
 
   cropId!: number;
   crop = signal<CropDto | null>(null);
@@ -33,6 +35,7 @@ export class CropDetailsComponent implements OnInit {
   submitting = signal<boolean>(false);
 
   activeTab = signal<'overview' | 'harvests'>('overview');
+  activeMobileMenuId = signal<number | null>(null);
 
   // Edit Crop Drawer state
   isEditDrawerOpen = signal<boolean>(false);
@@ -40,6 +43,7 @@ export class CropDetailsComponent implements OnInit {
   // Harvests Tab states
   harvests = signal<CropHarvestDto[]>([]);
   loadingHarvests = signal<boolean>(false);
+  harvestFilterForm!: FormGroup;
   isHarvestDrawerOpen = signal<boolean>(false);
   editingHarvestId = signal<number | null>(null);
   isDeleteHarvestConfirmOpen = signal<boolean>(false);
@@ -58,11 +62,37 @@ export class CropDetailsComponent implements OnInit {
   statusOptions = CROP_STATUS_OPTIONS;
   unitOptions = CROP_UNIT_OPTIONS;
 
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.activeMobileMenuId.set(null);
+  }
+
+  toggleMobileMenu(id: number, event: Event) {
+    event.stopPropagation();
+    this.activeMobileMenuId.set(this.activeMobileMenuId() === id ? null : id);
+  }
+
   ngOnInit() {
     this.cropId = Number(this.route.snapshot.paramMap.get('id'));
     this.initSellForm();
+    this.initHarvestFilterForm();
     this.loadLocations();
     this.loadCrop();
+
+    this.harvestFilterForm.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.activeTab() === 'harvests') {
+        this.loadHarvests();
+      }
+    });
+  }
+
+  initHarvestFilterForm() {
+    this.harvestFilterForm = this.fb.group({
+      Search: [''],
+      Unit: [null],
+      HarvestDateFrom: [null],
+      HarvestDateTo: [null]
+    });
   }
 
   initSellForm() {
@@ -160,7 +190,16 @@ export class CropDetailsComponent implements OnInit {
   // --- Harvests controls ---
   loadHarvests() {
     this.loadingHarvests.set(true);
-    this.cropsService.getHarvests({ CropId: this.cropId, PageSize: 100 }).subscribe({
+    const filters = this.harvestFilterForm.value;
+
+    this.cropsService.getHarvests({
+      CropId: this.cropId,
+      Search: filters.Search || undefined,
+      Unit: filters.Unit || undefined,
+      HarvestDateFrom: filters.HarvestDateFrom || undefined,
+      HarvestDateTo: filters.HarvestDateTo || undefined,
+      PageSize: 100
+    }).subscribe({
       next: (res: any) => {
         this.harvests.set(res.items || []);
         this.loadingHarvests.set(false);

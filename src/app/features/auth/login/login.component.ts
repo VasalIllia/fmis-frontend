@@ -26,7 +26,7 @@ export class LoginComponent {
   
   constructor() {
     afterNextRender(() => {
-      const baseUrl = 'http://127.0.0.1:8082';
+      const baseUrl = 'https://localhost:7242';
       const returnUrl = encodeURIComponent(`${window.location.origin}/auth/google-callback`);
       this.googleLoginUrl.set(`${baseUrl}/api/auth/google-login?returnUrl=${returnUrl}`);
     });

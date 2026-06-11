@@ -249,44 +249,17 @@
                   <option *ngFor="let u of unitOptions" [value]="u.value">{{ u.label }}</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-3">
                 <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
-                  >Рік</label
+                  >З дати</label
                 >
-                <input
-                  type="number"
-                  class="form-control form-control-sm"
-                  placeholder="2026"
-                  formControlName="Year"
-                  [readonly]="productFilterForm.get('IncludeAllYears')?.value"
-                  [class.bg-light]="productFilterForm.get('IncludeAllYears')?.value"
-                />
+                <input type="date" class="form-control" formControlName="DateFrom" />
               </div>
               <div class="col-md-3">
-                <div class="form-check pb-2">
-                  <input
-                    type="checkbox"
-                    id="allYears"
-                    class="form-check-input"
-                    formControlName="IncludeAllYears"
-                  />
-                  <label
-                    for="allYears"
-                    class="form-check-label text-secondary fw-semibold"
-                    style="font-size: 0.9rem"
-                  >
-                    Показати всі роки
-                  </label>
-                </div>
-              </div>
-              <div class="col-md-2 text-end">
-                <button
-                  type="button"
-                  class="btn btn-primary-custom w-100 d-flex align-items-center justify-content-center gap-2"
-                  (click)="openProductModal()"
+                <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
+                  >По дату</label
                 >
-                  <i class="bi bi-plus-lg"></i> Додати
-                </button>
+                <input type="date" class="form-control" formControlName="DateTo" />
               </div>
             </form>
           </div>
@@ -311,48 +284,113 @@
               (action)="openProductModal()"
             />
 
-            <div *ngIf="products().length > 0" class="card-custom p-0 overflow-hidden">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th class="ps-4">Назва</th>
-                      <th>Кількість</th>
-                      <th>Дата збору/виробництва</th>
-                      <th>Опис</th>
-                      <th class="text-end pe-4">Дії</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let prod of products()">
-                      <td class="ps-4 fw-semibold text-dark">{{ prod.name }}</td>
-                      <td>
-                        <strong>{{ prod.quantity }}</strong>
-                        <span class="text-muted ms-1">{{ getUnitLabel(prod.unit) }}</span>
-                      </td>
-                      <td>{{ prod.producedAt | date: 'yyyy-MM-dd' }}</td>
-                      <td class="text-secondary">{{ prod.description || '—' }}</td>
-                      <td class="text-end pe-4">
-                        <div class="d-inline-flex gap-2">
+            <div *ngIf="products().length > 0">
+              <!-- Desktop Table View -->
+              <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="ps-4">Назва</th>
+                        <th>Кількість</th>
+                        <th>Дата збору/виробництва</th>
+                        <th>Опис</th>
+                        <th class="text-end pe-4">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let prod of products()">
+                        <td class="ps-4 fw-semibold text-dark">{{ prod.name }}</td>
+                        <td>
+                          <strong>{{ prod.quantity }}</strong>
+                          <span class="text-muted ms-1">{{ getUnitLabel(prod.unit) }}</span>
+                        </td>
+                        <td>{{ prod.producedAt | date: 'yyyy-MM-dd' }}</td>
+                        <td class="text-secondary">{{ prod.description || '—' }}</td>
+                        <td class="text-end pe-4">
+                          <div class="d-inline-flex gap-2">
+                            <button
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="openProductModal(prod)"
+                              title="Редагувати"
+                            >
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline-danger"
+                              (click)="confirmDeleteProduct(prod)"
+                              title="Видалити"
+                            >
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile Cards Layout -->
+              <div class="d-md-none d-flex flex-column gap-3">
+                <article class="card-custom p-3 shadow-sm" *ngFor="let prod of products()">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h5 class="fw-bold text-dark mb-1">{{ prod.name }}</h5>
+                      <span class="badge bg-light text-dark border">
+                        {{ getUnitLabel(prod.unit) }}
+                      </span>
+                    </div>
+                    <div class="dropdown">
+                      <button
+                        class="btn btn-link text-muted p-0"
+                        type="button"
+                        (click)="toggleMobileMenu(prod.id, $event)"
+                      >
+                        <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end"
+                        [class.show]="activeMobileMenuId() === prod.id"
+                        style="right: 0; left: auto"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
                           <button
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="openProductModal(prod)"
-                            title="Редагувати"
+                            class="dropdown-item"
+                            (click)="openProductModal(prod); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-pencil"></i>
+                            <i class="bi bi-pencil me-2"></i> Редагувати
                           </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
                           <button
-                            class="btn btn-sm btn-outline-danger"
-                            (click)="confirmDeleteProduct(prod)"
-                            title="Видалити"
+                            class="dropdown-item text-danger"
+                            (click)="confirmDeleteProduct(prod); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash me-2"></i> Видалити
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div
+                    class="row g-2 pt-2 border-top text-secondary small"
+                    style="font-size: 0.85rem"
+                  >
+                    <div class="col-6">
+                      <strong>Кількість:</strong> {{ prod.quantity }} {{ getUnitLabel(prod.unit) }}
+                    </div>
+                    <div class="col-6">
+                      <strong>Дата:</strong> {{ prod.producedAt | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-12 text-truncate" *ngIf="prod.description">
+                      <strong>Опис:</strong> {{ prod.description }}
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </ng-template>
@@ -394,7 +432,8 @@
               </button>
             </div>
 
-            <div *ngIf="matings().length > 0" class="card-custom p-0 overflow-hidden">
+            <div *ngIf="matings().length > 0">
+              <div class="card-custom p-0 overflow-hidden d-none d-md-block">
               <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                   <thead class="table-light">
@@ -405,6 +444,7 @@
                       <th>Очікуваний приплід</th>
                       <th>Фактичний приплід</th>
                       <th>Статус</th>
+                      <th>Опис</th>
                       <th class="text-end pe-4">Дії</th>
                     </tr>
                   </thead>
@@ -434,6 +474,9 @@
                           {{ getMatingStatusLabel(mating.status) }}
                         </span>
                       </td>
+                      <td class="text-secondary text-truncate" style="max-width: 150px;" [title]="mating.description || ''">
+                        {{ mating.description || '—' }}
+                      </td>
                       <td class="text-end pe-4">
                         <div class="d-inline-flex gap-2">
                           <button
@@ -455,6 +498,93 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+              <!-- Mobile Cards Layout -->
+              <div class="d-md-none d-flex flex-column gap-3 mt-3">
+                <article class="card-custom p-3 shadow-sm" *ngFor="let mating of matings()">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h5 class="fw-bold text-dark mb-1">Спарювання</h5>
+                      <span [ngClass]="getMatingStatusClass(mating.status)">
+                        {{ getMatingStatusLabel(mating.status) }}
+                      </span>
+                    </div>
+                    <div class="dropdown">
+                      <button
+                        class="btn btn-link text-muted p-0"
+                        type="button"
+                        (click)="toggleMobileMenu(mating.id, $event)"
+                      >
+                        <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end"
+                        [class.show]="activeMobileMenuId() === mating.id"
+                        style="right: 0; left: auto"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
+                          <button
+                            class="dropdown-item"
+                            (click)="toggleExpandMating(mating.id, $event); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-eye me-2"></i> Деталі
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            class="dropdown-item"
+                            (click)="openMatingDrawer(mating.id); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-pencil me-2"></i> Редагувати
+                          </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                          <button
+                            class="dropdown-item text-danger"
+                            (click)="confirmDeleteMating(mating); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-trash me-2"></i> Видалити
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 pt-2 border-top text-secondary small" style="font-size: 0.85rem">
+                    <div class="col-6">
+                      <strong>Мати:</strong> <span [class.fw-bold]="mating.femaleAnimalId === animal()?.id">{{ getAnimalNameFromId(mating.femaleAnimalId) }}</span>
+                    </div>
+                    <div class="col-6">
+                      <strong>Батько:</strong> <span [class.fw-bold]="mating.maleAnimalId === animal()?.id">{{ getAnimalNameFromId(mating.maleAnimalId) }}</span>
+                    </div>
+                    <div class="col-6">
+                      <strong>Дата:</strong> {{ mating.matingDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-6">
+                      <strong>Очік. приплід:</strong> {{ mating.expectedBirthDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-12" *ngIf="mating.actualBirthDate">
+                      <strong>Факт. приплід:</strong> {{ mating.actualBirthDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                  </div>
+
+                  <!-- Collapsible Description -->
+                  <div
+                    class="mt-2 text-secondary small pt-2 border-top"
+                    [style.max-height]="expandedMatingId() === mating.id ? 'none' : '40px'"
+                    [style.overflow]="expandedMatingId() === mating.id ? 'visible' : 'hidden'"
+                    [style.display]="expandedMatingId() === mating.id ? 'block' : '-webkit-box'"
+                    [style.-webkit-line-clamp]="expandedMatingId() === mating.id ? 'unset' : '2'"
+                    [style.-webkit-box-orient]="expandedMatingId() === mating.id ? 'unset' : 'vertical'"
+                    style="font-size: 0.85rem"
+                  >
+                    <strong>Опис:</strong> <span class="whitespace-pre-wrap">{{ mating.description || '—' }}</span>
+                  </div>
+                </article>
               </div>
             </div>
           </ng-template>
@@ -491,8 +621,9 @@
               (action)="openMedicalDrawer()"
             />
 
-            <div *ngIf="medicalRecords().length > 0" class="card-custom p-0 overflow-hidden">
-              <div class="table-responsive">
+            <div *ngIf="medicalRecords().length > 0">
+              <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+                <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                   <thead class="table-light">
                     <tr>
@@ -530,6 +661,60 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              </div>
+
+              <!-- Mobile Cards Layout -->
+              <div class="d-md-none d-flex flex-column gap-3 mt-3">
+                <article class="card-custom p-3 shadow-sm" *ngFor="let record of medicalRecords()">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h5 class="fw-bold text-dark mb-1">{{ record.title }}</h5>
+                    </div>
+                    <div class="dropdown">
+                      <button
+                        class="btn btn-link text-muted p-0"
+                        type="button"
+                        (click)="toggleMobileMenu(record.id, $event)"
+                      >
+                        <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end"
+                        [class.show]="activeMobileMenuId() === record.id"
+                        style="right: 0; left: auto"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
+                          <button
+                            class="dropdown-item"
+                            (click)="openMedicalDrawer(record.id); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-pencil me-2"></i> Редагувати
+                          </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                          <button
+                            class="dropdown-item text-danger"
+                            (click)="confirmDeleteMedical(record); activeMobileMenuId.set(null)"
+                          >
+                            <i class="bi bi-trash me-2"></i> Видалити
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div class="row g-2 pt-2 border-top text-secondary small" style="font-size: 0.85rem">
+                    <div class="col-12">
+                      <strong>Дата:</strong> {{ record.procedureDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-12 text-truncate" *ngIf="record.description">
+                      <strong>Опис:</strong> {{ record.description }}
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </ng-template>
@@ -598,16 +783,21 @@
     (cancel)="closeDeleteConfirm()"
   />
 
-  <!-- Product Form Modal -->
+  <!-- Product Form Drawer -->
   <div
     *ngIf="isProductModalOpen()"
-    class="modal fade show d-block"
+    class="offcanvas offcanvas-end show shadow-lg product-form-drawer"
     tabindex="-1"
-    style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060"
+    style="
+      visibility: visible;
+      background: var(--color-surface);
+      z-index: 1050;
+      border-left: 1px solid var(--color-border);
+    "
   >
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content border-0 shadow-lg">
-        <div class="modal-header border-bottom">
+    <div class="h-100">
+      <div class="h-100 border-0 shadow-none d-flex flex-column">
+        <div class="offcanvas-header border-bottom">
           <h5 class="modal-title fw-bold">
             {{ editingProduct() ? 'Редагувати продукцію' : 'Додати продукцію' }}
           </h5>
@@ -618,8 +808,12 @@
             [disabled]="submittingProduct()"
           ></button>
         </div>
-        <form [formGroup]="productForm" (ngSubmit)="onSubmitProduct()">
-          <div class="modal-body py-4">
+        <form
+          [formGroup]="productForm"
+          (ngSubmit)="onSubmitProduct()"
+          class="d-flex flex-column h-100"
+        >
+          <div class="offcanvas-body py-4 flex-grow-1 overflow-auto">
             <div class="mb-3">
               <label for="prodName" class="form-label fw-semibold"
                 >Назва продукту <span class="text-danger">*</span></label
@@ -719,6 +913,12 @@
       </div>
     </div>
   </div>
+  <div
+    class="offcanvas-backdrop fade show"
+    *ngIf="isProductModalOpen()"
+    (click)="closeProductModal()"
+    style="z-index: 1040"
+  ></div>
 
   <!-- Delete Product Confirmation Modal -->
   <app-confirm-modal

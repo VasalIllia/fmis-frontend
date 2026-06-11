@@ -1,7 +1,7 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Component, inject, OnInit, signal, HostListener, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AnimalsService } from '../services/animals.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -22,6 +22,7 @@ export class AnimalProductsPageComponent implements OnInit {
   private fb = inject(FormBuilder);
   private animalsService = inject(AnimalsService);
   private toastService = inject(ToastService);
+  private route = inject(ActivatedRoute);
 
   allAnimals = signal<AnimalDto[]>([]);
   products = signal<AnimalProductDto[]>([]);
@@ -73,6 +74,7 @@ export class AnimalProductsPageComponent implements OnInit {
     this.initFilterForm();
     this.initProductForm();
     this.initSellForm();
+    this.applyRouteFilters();
     this.loadAllAnimals();
     this.loadProducts();
 
@@ -112,6 +114,17 @@ export class AnimalProductsPageComponent implements OnInit {
       DateFrom: [null],
       DateTo: [null]
     });
+  }
+
+  applyRouteFilters() {
+    const animalId = this.route.snapshot.queryParamMap.get('AnimalId');
+    if (!animalId) return;
+
+    const parsedAnimalId = Number(animalId);
+    if (!Number.isFinite(parsedAnimalId)) return;
+
+    this.filterForm.patchValue({ AnimalId: parsedAnimalId }, { emitEvent: false });
+    this.ensureAnimalLoaded(parsedAnimalId);
   }
 
   initProductForm() {
@@ -168,6 +181,19 @@ export class AnimalProductsPageComponent implements OnInit {
   loadMoreAnimals() {
     this.animalPage++;
     this.loadAllAnimals(true);
+  }
+
+  ensureAnimalLoaded(animalId: number) {
+    if (this.allAnimals().some(a => a.id === animalId)) return;
+
+    this.animalsService.getAnimalById(animalId).subscribe({
+      next: (animal) => {
+        if (!this.allAnimals().some(a => a.id === animalId)) {
+          this.allAnimals.set([animal, ...this.allAnimals()]);
+        }
+      },
+      error: () => {}
+    });
   }
 
   loadProducts() {

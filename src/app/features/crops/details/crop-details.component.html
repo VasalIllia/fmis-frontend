@@ -181,6 +181,42 @@
 
         <!-- Tab 2: Harvests -->
         <div *ngSwitchCase="'harvests'">
+          <div class="card-custom mb-4">
+            <form [formGroup]="harvestFilterForm" class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium" style="font-size: 0.85rem"
+                  >Пошук</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Пошук врожаю..."
+                  formControlName="Search"
+                />
+              </div>
+              <div class="col-md-2">
+                <label class="form-label text-secondary fw-medium" style="font-size: 0.85rem"
+                  >Одиниця</label
+                >
+                <select class="form-select" formControlName="Unit">
+                  <option [ngValue]="null">Всі</option>
+                  <option *ngFor="let u of unitOptions" [value]="u.value">{{ u.label }}</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
+                  >З дати</label
+                >
+                <input type="date" class="form-control" formControlName="HarvestDateFrom" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label text-secondary fw-medium mb-1" style="font-size: 0.85rem"
+                  >По дату</label
+                >
+                <input type="date" class="form-control" formControlName="HarvestDateTo" />
+              </div>
+            </form>
+          </div>
           <!-- Harvest List -->
           <app-loading-spinner *ngIf="loadingHarvests(); else harvestListTpl" />
 
@@ -194,53 +230,127 @@
               (action)="openHarvestDrawer()"
             />
 
-            <div *ngIf="harvests().length > 0" class="card-custom p-0 overflow-hidden">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="table-light">
-                    <tr>
-                      <th class="ps-4">Кількість врожаю</th>
-                      <th>Одиниця</th>
-                      <th>Дата збору</th>
-                      <th>Опис / Якість</th>
-                      <th class="text-end pe-4">Дії</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let harv of harvests()">
-                      <td class="ps-4 fw-bold text-dark">{{ harv.quantity }}</td>
-                      <td>{{ getUnitLabel(harv.unit) }}</td>
-                      <td>{{ harv.harvestDate | date: 'yyyy-MM-dd' }}</td>
-                      <td class="text-secondary">{{ harv.description || '—' }}</td>
-                      <td class="text-end pe-4">
-                        <div class="d-inline-flex gap-2">
+            <div *ngIf="harvests().length > 0">
+              <!-- Desktop Table View -->
+              <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="ps-4">Кількість врожаю</th>
+                        <th>Одиниця</th>
+                        <th>Дата збору</th>
+                        <th>Опис / Якість</th>
+                        <th class="text-end pe-4">Дії</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let harv of harvests()">
+                        <td class="ps-4 fw-bold text-dark">{{ harv.quantity }}</td>
+                        <td>{{ getUnitLabel(harv.unit) }}</td>
+                        <td>{{ harv.harvestDate | date: 'yyyy-MM-dd' }}</td>
+                        <td class="text-secondary">{{ harv.description || '—' }}</td>
+                        <td class="text-end pe-4">
+                          <div class="d-inline-flex gap-2">
+                            <button
+                              class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                              [disabled]="harv.quantity <= 0"
+                              (click)="openSellModal(harv)"
+                              title="Продати врожай"
+                            >
+                              <i class="bi bi-currency-dollar"></i> Продати
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline-primary"
+                              (click)="openHarvestDrawer(harv.id)"
+                              title="Редагувати"
+                            >
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <button
+                              class="btn btn-sm btn-outline-danger"
+                              (click)="confirmDeleteHarvest(harv)"
+                              title="Видалити"
+                            >
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Mobile Cards Layout -->
+              <div class="d-md-none d-flex flex-column gap-3">
+                <article class="card-custom p-3 shadow-sm" *ngFor="let harv of harvests()">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                      <h5 class="fw-bold text-dark mb-1">Збір врожаю</h5>
+                      <span class="badge bg-light text-dark border">
+                        {{ getUnitLabel(harv.unit) }}
+                      </span>
+                    </div>
+                    <div class="dropdown">
+                      <button
+                        class="btn btn-link text-muted p-0"
+                        type="button"
+                        (click)="toggleMobileMenu(harv.id, $event)"
+                      >
+                        <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                      </button>
+                      <ul
+                        class="dropdown-menu dropdown-menu-end"
+                        [class.show]="activeMobileMenuId() === harv.id"
+                        style="right: 0; left: auto"
+                        (click)="$event.stopPropagation()"
+                      >
+                        <li>
                           <button
-                            class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                            class="dropdown-item text-success"
                             [disabled]="harv.quantity <= 0"
-                            (click)="openSellModal(harv)"
-                            title="Продати врожай"
+                            (click)="openSellModal(harv); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-currency-dollar"></i> Продати
+                            <i class="bi bi-currency-dollar me-2"></i> Продати
                           </button>
+                        </li>
+                        <li>
                           <button
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="openHarvestDrawer(harv.id)"
-                            title="Редагувати"
+                            class="dropdown-item"
+                            (click)="openHarvestDrawer(harv.id); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-pencil"></i>
+                            <i class="bi bi-pencil me-2"></i> Редагувати
                           </button>
+                        </li>
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
                           <button
-                            class="btn btn-sm btn-outline-danger"
-                            (click)="confirmDeleteHarvest(harv)"
-                            title="Видалити"
+                            class="dropdown-item text-danger"
+                            (click)="confirmDeleteHarvest(harv); activeMobileMenuId.set(null)"
                           >
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash me-2"></i> Видалити
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div
+                    class="row g-2 pt-2 border-top text-secondary small"
+                    style="font-size: 0.85rem"
+                  >
+                    <div class="col-6">
+                      <strong>Кількість:</strong> {{ harv.quantity }} {{ getUnitLabel(harv.unit) }}
+                    </div>
+                    <div class="col-6">
+                      <strong>Дата:</strong> {{ harv.harvestDate | date: 'yyyy-MM-dd' }}
+                    </div>
+                    <div class="col-12 text-truncate" *ngIf="harv.description">
+                      <strong>Опис:</strong> {{ harv.description }}
+                    </div>
+                  </div>
+                </article>
               </div>
             </div>
           </ng-template>

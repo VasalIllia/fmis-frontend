@@ -1,8 +1,11 @@
-<nav aria-label="Пагінація" class="d-flex justify-content-between align-items-center mt-4">
+<nav
+  aria-label="Пагінація"
+  class="pagination-bar d-flex justify-content-between align-items-center mt-4 gap-2 flex-wrap"
+>
   <div class="text-muted" style="font-size: 0.9rem;">
     Всього: <strong>{{ totalCount }}</strong> записів
   </div>
-  <div class="d-inline-flex gap-1" *ngIf="totalPages > 1">
+  <div class="pagination-pages d-inline-flex gap-1 flex-wrap" *ngIf="totalPages > 1">
     <button
       class="btn btn-outline-secondary btn-sm"
       [disabled]="pageNumber === 1"

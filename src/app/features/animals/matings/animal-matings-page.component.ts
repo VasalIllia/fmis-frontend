@@ -1,5 +1,5 @@
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, signal, DestroyRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
@@ -41,6 +41,26 @@ export class AnimalMatingsPageComponent implements OnInit {
   isDeleteConfirmOpen = signal<boolean>(false);
   matingToDelete = signal<AnimalMatingDto | null>(null);
   submittingDelete = signal<boolean>(false);
+
+  activeMobileMenuId = signal<number | null>(null);
+  expandedMatingId = signal<number | null>(null);
+
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.activeMobileMenuId.set(null);
+  }
+
+  toggleMobileMenu(id: number, event: Event) {
+    event.stopPropagation();
+    this.activeMobileMenuId.set(this.activeMobileMenuId() === id ? null : id);
+  }
+
+  toggleExpandMating(id: number, event?: Event) {
+    if (event) {
+      event.stopPropagation();
+    }
+    this.expandedMatingId.set(this.expandedMatingId() === id ? null : id);
+  }
 
   statusOptions = [
     { value: 'Planned', label: 'Заплановано' },
