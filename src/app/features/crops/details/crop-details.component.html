@@ -1,0 +1,421 @@
+<div class="container-fluid p-0">
+  <!-- Breadcrumb navigation -->
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-3">
+      <li class="breadcrumb-item">
+        <a routerLink="/crops" class="text-decoration-none text-success">Рослинництво</a>
+      </li>
+      <li class="breadcrumb-item active" aria-current="page">
+        {{ crop()?.name || 'Деталі посіву' }}
+      </li>
+    </ol>
+  </nav>
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="loading(); else detailsTpl" />
+
+  <ng-template #detailsTpl>
+    <div *ngIf="!crop()" class="text-center py-5 bg-white border rounded-3">
+      <i class="bi bi-exclamation-octagon text-danger" style="font-size: 3rem"></i>
+      <h4 class="mt-3 text-dark">Посів не знайдено</h4>
+      <p class="text-muted">Можливо, запис було вилучено або посилання недійсне.</p>
+      <a routerLink="/crops" class="btn btn-primary-custom mt-2">Повернутися до списку</a>
+    </div>
+
+    <div *ngIf="crop()">
+      <!-- Alert for past expected harvest date -->
+      <div
+        *ngIf="showHarvestWarning()"
+        class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis mb-4 p-3 d-flex align-items-center gap-3 shadow-sm"
+      >
+        <i class="bi bi-exclamation-triangle-fill fs-4"></i>
+        <div>
+          <h6 class="fw-bold mb-1">Увага! Очікувана дата збору врожаю минула</h6>
+          <p class="mb-0" style="font-size: 0.9rem">
+            Очікувана дата збору ({{ crop()?.expectedHarvestDate | date: 'yyyy-MM-dd' }}) минула,
+            проте статус посіву досі не оновлено на "Завершено" або "Втрачено". Будь ласка, оновіть
+            статус посіву або внесіть зібраний врожай.
+          </p>
+        </div>
+      </div>
+
+      <!-- Header Card -->
+      <section class="card-custom mb-4 p-4">
+        <div
+          class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3"
+        >
+          <div>
+            <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+              <h2 class="fw-bold text-dark mb-0">{{ crop()?.name }}</h2>
+              <span [ngClass]="getStatusClass(crop()?.status!)">
+                {{ getStatusLabel(crop()?.status!) }}
+              </span>
+              <span class="badge bg-success text-white">
+                {{ getTypeLabel(crop()?.type!) }}
+              </span>
+            </div>
+            <div class="text-secondary" style="font-size: 0.95rem">
+              Локація/Ділянка: <strong>{{ getLocationName(crop()?.locationId!) }}</strong> · Площа:
+              <strong>{{ crop()?.quantity }} {{ getUnitLabel(crop()?.unit!) }}</strong>
+            </div>
+          </div>
+
+          <!-- Main Actions -->
+          <div class="d-flex flex-wrap gap-2">
+            <button
+              class="btn btn-outline-primary d-flex align-items-center gap-2"
+              (click)="openEditDrawer()"
+            >
+              <i class="bi bi-pencil"></i> Змінити
+            </button>
+            <button
+              class="btn btn-success text-white d-flex align-items-center gap-2"
+              *ngIf="crop()?.status !== 'Completed' && crop()?.status !== 'Failed'"
+              (click)="openHarvestDrawer()"
+            >
+              <i class="bi bi-gift"></i> Зібрати врожай
+            </button>
+            <button
+              class="btn btn-outline-danger d-flex align-items-center gap-2"
+              (click)="confirmDelete()"
+            >
+              <i class="bi bi-trash"></i> Вилучити
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabs Headers -->
+      <ul class="nav nav-tabs mb-4 border-bottom">
+        <li class="nav-item">
+          <button
+            class="nav-link fw-semibold px-4"
+            [class.active]="activeTab() === 'overview'"
+            [class.text-success]="activeTab() === 'overview'"
+            (click)="activeTab.set('overview')"
+          >
+            Огляд посіву
+          </button>
+        </li>
+        <li class="nav-item">
+          <button
+            class="nav-link fw-semibold px-4"
+            [class.active]="activeTab() === 'harvests'"
+            [class.text-success]="activeTab() === 'harvests'"
+            (click)="activeTab.set('harvests'); loadHarvests()"
+          >
+            Збори врожаю
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tabs Content -->
+      <div [ngSwitch]="activeTab()">
+        <!-- Tab 1: Overview -->
+        <section *ngSwitchCase="'overview'" class="card-custom">
+          <h4 class="fw-bold mb-4 text-dark">Загальна інформація про посів</h4>
+          <div class="row g-4">
+            <div class="col-md-6">
+              <table class="table table-borderless align-middle mb-0">
+                <tbody>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2" style="width: 200px">Культура:</td>
+                    <td class="fw-semibold text-dark py-2">{{ getTypeLabel(crop()!.type) }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2">Засіяна площа / обсяг:</td>
+                    <td class="fw-bold text-dark py-2">
+                      {{ crop()?.quantity }} {{ getUnitLabel(crop()!.unit) }}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2">Локація / Поле:</td>
+                    <td class="py-2">{{ getLocationName(crop()?.locationId!) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="col-md-6">
+              <table class="table table-borderless align-middle mb-0">
+                <tbody>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2" style="width: 200px">Статус вегетації:</td>
+                    <td class="py-2">
+                      <span [ngClass]="getStatusClass(crop()?.status!)">
+                        {{ getStatusLabel(crop()?.status!) }}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2">Дата посіву:</td>
+                    <td class="py-2 fw-semibold">{{ crop()?.sowingDate | date: 'yyyy-MM-dd' }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-secondary ps-0 py-2">Очікуваний врожай:</td>
+                    <td class="py-2 fw-semibold text-success">
+                      {{ crop()?.expectedHarvestDate | date: 'yyyy-MM-dd' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="col-12 mt-4" *ngIf="crop()?.description">
+              <h6 class="fw-semibold text-dark mb-2">Опис / Нотатки:</h6>
+              <div class="bg-light p-3 rounded text-secondary-custom whitespace-pre-wrap">
+                {{ crop()?.description }}
+              </div>
+            </div>
+
+            <div class="col-12 text-muted" style="font-size: 0.8rem; margin-top: 40px">
+              Створено в системі:
+              <strong>{{ crop()?.createdAt | date: 'yyyy-MM-dd HH:mm' }}</strong>
+              <span *ngIf="crop()?.updatedAt">
+                · Оновлено:
+                <strong>{{ crop()?.updatedAt | date: 'yyyy-MM-dd HH:mm' }}</strong></span
+              >
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 2: Harvests -->
+        <div *ngSwitchCase="'harvests'">
+          <!-- Harvest List -->
+          <app-loading-spinner *ngIf="loadingHarvests(); else harvestListTpl" />
+
+          <ng-template #harvestListTpl>
+            <app-empty-state
+              *ngIf="harvests().length === 0"
+              icon="bi-box"
+              title="Врожаїв ще не зібрано"
+              message="Зареєструйте перший збір врожаю для цього посіву."
+              actionLabel="Зібрати врожай"
+              (action)="openHarvestDrawer()"
+            />
+
+            <div *ngIf="harvests().length > 0" class="card-custom p-0 overflow-hidden">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th class="ps-4">Кількість врожаю</th>
+                      <th>Одиниця</th>
+                      <th>Дата збору</th>
+                      <th>Опис / Якість</th>
+                      <th class="text-end pe-4">Дії</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let harv of harvests()">
+                      <td class="ps-4 fw-bold text-dark">{{ harv.quantity }}</td>
+                      <td>{{ getUnitLabel(harv.unit) }}</td>
+                      <td>{{ harv.harvestDate | date: 'yyyy-MM-dd' }}</td>
+                      <td class="text-secondary">{{ harv.description || '—' }}</td>
+                      <td class="text-end pe-4">
+                        <div class="d-inline-flex gap-2">
+                          <button
+                            class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                            [disabled]="harv.quantity <= 0"
+                            (click)="openSellModal(harv)"
+                            title="Продати врожай"
+                          >
+                            <i class="bi bi-currency-dollar"></i> Продати
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-primary"
+                            (click)="openHarvestDrawer(harv.id)"
+                            title="Редагувати"
+                          >
+                            <i class="bi bi-pencil"></i>
+                          </button>
+                          <button
+                            class="btn btn-sm btn-outline-danger"
+                            (click)="confirmDeleteHarvest(harv)"
+                            title="Видалити"
+                          >
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Drawers / Modals -->
+
+  <!-- Edit Crop Drawer -->
+  <app-crop-form
+    *ngIf="isEditDrawerOpen()"
+    [cropId]="cropId"
+    (close)="closeEditDrawer()"
+    (saved)="onCropSaved()"
+  ></app-crop-form>
+
+  <!-- Harvest Drawer -->
+  <app-harvest-form
+    *ngIf="isHarvestDrawerOpen()"
+    [harvestId]="editingHarvestId()"
+    [selectedCrop]="crop()"
+    (close)="closeHarvestDrawer()"
+    (saved)="onHarvestSaved()"
+  ></app-harvest-form>
+
+  <!-- Delete Crop Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Вилучити посів"
+    [message]="
+      'Ви впевнені, що хочете видалити посів <strong>' + (crop()?.name || '') + '</strong>?'
+    "
+    warning="Ця дія також вилучить всю історію зборів врожаю для цього посіву!"
+    confirmText="Видалити"
+    [submitting]="submitting()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+
+  <!-- Delete Harvest Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteHarvestConfirmOpen()"
+    title="Вилучити запис врожаю"
+    [message]="
+      'Ви впевнені, що хочете видалити цей запис збору врожаю від ' +
+      (harvestToDelete()?.harvestDate | date: 'yyyy-MM-dd') +
+      '?'
+    "
+    confirmText="Видалити"
+    [submitting]="submittingHarvest()"
+    (confirm)="onDeleteHarvest()"
+    (cancel)="closeDeleteHarvestConfirm()"
+  />
+
+  <!-- Sell Harvest Modal -->
+  <div
+    *ngIf="isSellModalOpen()"
+    class="modal fade show d-block"
+    tabindex="-1"
+    style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <header class="modal-header border-bottom bg-success text-white">
+          <h5 class="modal-title fw-bold">Продати врожай</h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            (click)="closeSellModal()"
+            [disabled]="submittingSell()"
+          ></button>
+        </header>
+        <form [formGroup]="sellForm" (ngSubmit)="onSubmitSell()">
+          <div class="modal-body py-4">
+            <div class="alert alert-info border-0 py-2" style="font-size: 0.9rem">
+              <strong>Посів:</strong> {{ crop()?.name }} <br />
+              <strong>Зібрана партія:</strong>
+              {{ sellHarvestContext()?.harvestDate | date: 'yyyy-MM-dd' }} <br />
+              <strong>В наявності для продажу:</strong> {{ sellHarvestContext()?.quantity }}
+              {{ getUnitLabel(sellHarvestContext()?.unit!) }}
+            </div>
+
+            <div class="mb-3">
+              <label for="sellQty" class="form-label fw-semibold"
+                >Кількість для продажу <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                id="sellQty"
+                class="form-control"
+                formControlName="quantity"
+                min="0.001"
+                step="any"
+                [class.is-invalid]="
+                  sellForm.get('quantity')?.touched && sellForm.get('quantity')?.invalid
+                "
+              />
+              <div class="invalid-feedback">
+                Введіть коректну кількість. Максимально доступно:
+                {{ sellHarvestContext()?.quantity }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="sellPrice" class="form-label fw-semibold"
+                >Ціна за одиницю (₴) <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                id="sellPrice"
+                class="form-control"
+                formControlName="unitPrice"
+                min="0.01"
+                step="any"
+                [class.is-invalid]="
+                  sellForm.get('unitPrice')?.touched && sellForm.get('unitPrice')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Ціна повинна бути більше нуля.</div>
+            </div>
+
+            <div class="mb-3">
+              <label for="sellDate" class="form-label fw-semibold"
+                >Дата продажу <span class="text-danger">*</span></label
+              >
+              <input
+                type="date"
+                id="sellDate"
+                class="form-control"
+                formControlName="soldAt"
+                [class.is-invalid]="
+                  sellForm.get('soldAt')?.touched && sellForm.get('soldAt')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Введіть дату продажу.</div>
+            </div>
+
+            <div class="mb-0">
+              <label for="sellDesc" class="form-label fw-semibold">Опис продажу</label>
+              <textarea
+                id="sellDesc"
+                class="form-control"
+                formControlName="description"
+                rows="2"
+                placeholder="Покупець, деталі контракту..."
+              ></textarea>
+            </div>
+          </div>
+          <footer class="modal-footer border-top">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="closeSellModal()"
+              [disabled]="submittingSell()"
+            >
+              Скасувати
+            </button>
+            <button
+              type="submit"
+              class="btn btn-success d-flex align-items-center gap-2"
+              [disabled]="sellForm.invalid || submittingSell()"
+            >
+              <span
+                *ngIf="submittingSell()"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Продати
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

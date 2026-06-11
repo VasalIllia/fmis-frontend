@@ -1,0 +1,399 @@
+<div class="container-fluid p-0">
+  <div class="mb-4">
+    <a
+      routerLink="/overview"
+      class="text-decoration-none"
+      style="color: var(--color-primary); font-weight: 500"
+    >
+      <i class="bi bi-arrow-left"></i> Повернутися на головну
+    </a>
+  </div>
+
+  <!-- Header -->
+  <app-page-header
+    title="Планувальник завдань"
+    subtitle="Календар подій, нагадувань та ветеринарно-господарських робіт"
+  >
+    <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+      <i
+        class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+      ></i>
+      <input
+        type="text"
+        class="form-control ps-5"
+        placeholder="Пошук завдань..."
+        [value]="filterForm.get('Search')?.value || ''"
+        (input)="onSearchInputChange($event)"
+      />
+    </div>
+    <button
+      class="btn btn-outline-secondary d-flex align-items-center gap-2"
+      (click)="toggleFilters()"
+    >
+      <i class="bi bi-funnel"></i> Фільтри
+    </button>
+    <button
+      class="btn btn-primary-custom d-flex align-items-center gap-2"
+      (click)="openCreateDrawer()"
+    >
+      <i class="bi bi-plus-lg"></i> Додати завдання
+    </button>
+  </app-page-header>
+
+  <div class="row">
+    <!-- Main Content Column -->
+    <main class="col-12">
+      <!-- Loading State -->
+      <app-loading-spinner *ngIf="loading(); else contentTpl" />
+
+      <ng-template #contentTpl>
+        <!-- Empty State (No items at all on farm) -->
+        <app-empty-state
+          *ngIf="items().length === 0 && !hasActiveFilters()"
+          icon="bi-calendar-check"
+          title="Завдань не знайдено"
+          message="Додайте перше завдання для планування господарських робіт."
+          actionLabel="Додати завдання"
+          (action)="openCreateDrawer()"
+        />
+
+        <!-- Empty State (Filtered result empty) -->
+        <app-empty-state
+          *ngIf="items().length === 0 && hasActiveFilters()"
+          icon="bi-funnel"
+          title="За фільтрами нічого не знайдено"
+          message="Спробуйте змінити або очистити фільтри пошуку."
+          actionLabel="Очистити фільтри"
+          (action)="clearFilters()"
+        />
+
+        <!-- Tasks List -->
+        <div *ngIf="items().length > 0">
+          <!-- Desktop Table View -->
+          <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4" style="width: 80px">Приор.</th>
+                    <th>Тема завдання</th>
+                    <th>Початок</th>
+                    <th>Завершення</th>
+                    <th>Джерело</th>
+                    <th>Статус</th>
+                    <th>Email</th>
+                    <th class="text-end pe-4">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of items()">
+                    <td class="ps-4">
+                      <span [ngClass]="getPriorityClass(item.priority)">
+                        {{ getPriorityLabel(item.priority) }}
+                      </span>
+                    </td>
+                    <td>
+                      <div class="fw-semibold text-dark">{{ item.title }}</div>
+                      <div class="text-muted small text-truncate" style="max-width: 250px">
+                        {{ item.description || '—' }}
+                      </div>
+                    </td>
+                    <td>{{ item.startsAt | date: 'yyyy-MM-dd HH:mm' }}</td>
+                    <td>{{ item.endsAt ? (item.endsAt | date: 'yyyy-MM-dd HH:mm') : '—' }}</td>
+                    <td>
+                      <span class="badge bg-light text-dark border">
+                        {{ getSourceLabel(item.sourceType) }}
+                      </span>
+                    </td>
+                    <td>
+                      <!-- Quick status select toggle -->
+                      <select
+                        [value]="item.status"
+                        (change)="onStatusChange(item, $event)"
+                        class="form-select form-select-sm d-inline-block w-auto py-0 ps-2 pe-4 fw-semibold"
+                        style="font-size: 0.8rem; height: auto"
+                        [ngClass]="getStatusSelectClass(item.status)"
+                      >
+                        <option value="Planned">Заплановано</option>
+                        <option value="InProgress">В процесі</option>
+                        <option value="Done">Виконано</option>
+                        <option value="Cancelled">Скасовано</option>
+                      </select>
+                    </td>
+                    <td>
+                      <i
+                        *ngIf="item.notificationsEnabled"
+                        class="bi bi-envelope-fill text-success"
+                        [title]="
+                          'Email сповіщення активне: ' +
+                          (item.notification?.notifyAt | date: 'yyyy-MM-dd HH:mm')
+                        "
+                      ></i>
+                      <i
+                        *ngIf="!item.notificationsEnabled"
+                        class="bi bi-envelope text-muted"
+                        title="Без сповіщення"
+                      ></i>
+                    </td>
+                    <td class="text-end pe-4">
+                      <div class="d-inline-flex gap-2">
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="openEditDrawer(item.id)"
+                          title="Редагувати"
+                        >
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="confirmDelete(item)"
+                          title="Вилучити"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Cards Layout -->
+          <div class="d-md-none d-flex flex-column gap-3">
+            <article class="card-custom p-3 shadow-sm" *ngFor="let item of items()">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <span [ngClass]="getPriorityClass(item.priority)" class="me-1">
+                    {{ getPriorityLabel(item.priority) }}
+                  </span>
+                  <span class="badge bg-light text-dark border">
+                    {{ getSourceLabel(item.sourceType) }}
+                  </span>
+                  <h5 class="fw-bold text-dark mt-2 mb-1">{{ item.title }}</h5>
+                </div>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-link text-muted p-0"
+                    type="button"
+                    (click)="toggleMobileMenu(item.id, $event)"
+                  >
+                    <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                  </button>
+                  <ul
+                    class="dropdown-menu dropdown-menu-end"
+                    [class.show]="activeMobileMenuId() === item.id"
+                    style="right: 0; left: auto"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <li>
+                      <button
+                        class="dropdown-item"
+                        (click)="toggleExpandItem(item.id, $event); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-eye me-2"></i> Деталі
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        class="dropdown-item"
+                        (click)="openEditDrawer(item.id); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-pencil me-2"></i> Редагувати
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <button
+                        class="dropdown-item text-danger"
+                        (click)="confirmDelete(item); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-trash me-2"></i> Видалити
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <p
+                class="text-secondary small mb-2"
+                *ngIf="item.description"
+                [style.max-height]="expandedItemId() === item.id ? 'none' : '40px'"
+                [style.overflow]="expandedItemId() === item.id ? 'visible' : 'hidden'"
+                [style.display]="expandedItemId() === item.id ? 'block' : '-webkit-box'"
+                [style.-webkit-line-clamp]="expandedItemId() === item.id ? 'unset' : '2'"
+                [style.-webkit-box-orient]="expandedItemId() === item.id ? 'unset' : 'vertical'"
+              >
+                {{ item.description }}
+              </p>
+              <div
+                class="mb-2 text-secondary small p-2 bg-light rounded"
+                *ngIf="expandedItemId() === item.id"
+                style="font-size: 0.8rem"
+              >
+                <div><strong>Джерело:</strong> {{ getSourceLabel(item.sourceType) }}</div>
+                <div *ngIf="item.notification">
+                  <strong>Email сповіщення:</strong>
+                  {{ item.notification.notifyAt | date: 'yyyy-MM-dd HH:mm' }} ({{
+                    item.notification.emailSentAt ? 'Надіслано' : 'Очікує'
+                  }})
+                </div>
+              </div>
+
+              <div class="row g-2 pt-2 border-top text-secondary small" style="font-size: 0.85rem">
+                <div class="col-6">
+                  <strong>Початок:</strong> {{ item.startsAt | date: 'yyyy-MM-dd HH:mm' }}
+                </div>
+                <div class="col-6">
+                  <strong>Кінець:</strong>
+                  {{ item.endsAt ? (item.endsAt | date: 'yyyy-MM-dd HH:mm') : '—' }}
+                </div>
+                <div class="col-6 d-flex align-items-center gap-1">
+                  <strong>Статус:</strong>
+                  <select
+                    [value]="item.status"
+                    (change)="onStatusChange(item, $event)"
+                    class="form-select form-select-sm d-inline-block w-auto py-0 ps-2 pe-4 fw-semibold"
+                    style="font-size: 0.75rem; height: auto"
+                    [ngClass]="getStatusSelectClass(item.status)"
+                  >
+                    <option value="Planned">Заплановано</option>
+                    <option value="InProgress">В процесі</option>
+                    <option value="Done">Виконано</option>
+                    <option value="Cancelled">Скасовано</option>
+                  </select>
+                </div>
+                <div class="col-6 d-flex align-items-center gap-1">
+                  <strong>Email:</strong>
+                  <i
+                    *ngIf="item.notificationsEnabled"
+                    class="bi bi-envelope-fill text-success"
+                    [title]="
+                      'Email сповіщення активне: ' +
+                      (item.notification?.notifyAt | date: 'yyyy-MM-dd HH:mm')
+                    "
+                  ></i>
+                  <i
+                    *ngIf="!item.notificationsEnabled"
+                    class="bi bi-envelope text-muted"
+                    title="Без сповіщення"
+                  ></i>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- Pagination -->
+          <app-pagination
+            [pageNumber]="pageNumber()"
+            [totalPages]="totalPages()"
+            [totalCount]="totalCount()"
+            (pageChange)="changePage($event)"
+          />
+        </div>
+      </ng-template>
+
+      <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+      <div
+        class="offcanvas offcanvas-end shadow-sm"
+        [class.show]="showFilters()"
+        tabindex="-1"
+        style="z-index: 1045"
+      >
+        <div class="offcanvas-header border-bottom">
+          <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+          <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+        </div>
+        <div class="offcanvas-body p-4">
+          <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+            <!-- Priority -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Пріоритет</label
+              >
+              <select class="form-select" formControlName="Priority">
+                <option [ngValue]="null">Всі пріоритети</option>
+                <option value="Low">Низький</option>
+                <option value="Normal">Середній</option>
+                <option value="High">Високий</option>
+              </select>
+            </div>
+            <!-- Status -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Статус</label
+              >
+              <select class="form-select" formControlName="Status">
+                <option [ngValue]="null">Всі статуси</option>
+                <option value="Planned">Заплановано</option>
+                <option value="InProgress">В процесі</option>
+                <option value="Done">Виконано</option>
+                <option value="Cancelled">Скасовано</option>
+              </select>
+            </div>
+            <!-- Source Type -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Джерело</label
+              >
+              <select class="form-select" formControlName="SourceType">
+                <option [ngValue]="null">Всі джерела</option>
+                <option value="Manual">Вручну</option>
+                <option value="AnimalMating">Парування</option>
+                <option value="Crop">Рослинництво</option>
+                <option value="Garden">Садівництво</option>
+                <option value="Financial">Фінанси</option>
+                <option value="AnimalMedicalRecord">Медична картка</option>
+              </select>
+            </div>
+            <!-- Date From -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Дата початку від</label
+              >
+              <input type="datetime-local" class="form-control" formControlName="DateFrom" />
+            </div>
+            <!-- Date To -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Дата початку до</label
+              >
+              <input type="datetime-local" class="form-control" formControlName="DateTo" />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Filter Backdrop -->
+      <div
+        class="offcanvas-backdrop fade show"
+        *ngIf="showFilters()"
+        (click)="toggleFilters()"
+        style="z-index: 1040"
+      ></div>
+    </main>
+  </div>
+
+  <!-- Drawers & Modals -->
+
+  <!-- Form Drawer -->
+  <app-plan-item-form
+    *ngIf="isFormDrawerOpen()"
+    [itemId]="editingItemId()"
+    (close)="closeCreateDrawer()"
+    (saved)="onItemSaved()"
+  ></app-plan-item-form>
+
+  <!-- Delete Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Вилучити завдання"
+    [message]="
+      'Ви дійсно бажаєте видалити заплановане завдання <strong>' +
+      itemToDelete()?.title +
+      '</strong>?'
+    "
+    [submitting]="submittingDelete()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+</div>

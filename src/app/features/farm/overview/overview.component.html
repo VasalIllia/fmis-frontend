@@ -1,0 +1,333 @@
+<div *ngIf="shouldShowCreateFarm(); else farmDashboard" class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card card-custom border-0 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-center mb-4">
+          <div class="profile-icon mx-auto mb-3" style="width: 48px; height: 48px">
+            <i class="bi bi-house-door"></i>
+          </div>
+          <h2 class="h4 fw-bold text-dark mb-2">Вітаємо у Farma!</h2>
+          <p class="text-secondary-custom small mb-0">
+            Створіть свою першу ферму, щоб почати роботу.
+          </p>
+        </div>
+
+        <div *ngIf="errorMessage()" class="alert alert-danger p-3 mb-3 small">
+          {{ errorMessage() }}
+        </div>
+
+        <form [formGroup]="farmForm" (ngSubmit)="onCreateFarm()" class="d-flex flex-column gap-3">
+          <div>
+            <label class="form-label text-secondary-custom small mb-1">Назва ферми</label>
+            <input class="form-control" formControlName="name" placeholder="Моя ферма" />
+            <div
+              class="text-danger-custom small mt-1"
+              *ngIf="
+                farmForm.controls['name'].hasError('required') && farmForm.controls['name'].touched
+              "
+            >
+              Назва обов'язкова
+            </div>
+          </div>
+
+          <button
+            class="btn btn-primary-custom w-100 mt-2"
+            type="submit"
+            [disabled]="farmForm.invalid || isLoading()"
+          >
+            <span class="spinner-border spinner-border-sm me-1" *ngIf="isLoading()"></span>
+            <span *ngIf="!isLoading()">Створити ферму</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #farmDashboard>
+  <div *ngIf="sessionRefreshMessage()" class="alert alert-warning border-0 mb-4">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    {{ sessionRefreshMessage() }}
+  </div>
+
+  <!-- Dashboard Stats Cards -->
+  <div class="row g-3 mb-4">
+    <!-- Animals -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Тваринництво</span>
+          <div
+            class="profile-icon bg-success-subtle text-success"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-piggy-bank fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{
+              totalAnimals() !== null ? totalAnimals() : '0'
+            }}</span>
+          </h3>
+          <span class="text-muted small">активних тварин</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Crops -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Рослинництво</span>
+          <div
+            class="profile-icon bg-success-subtle text-success"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-flower2 fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{ totalCrops() !== null ? totalCrops() : '0' }}</span>
+          </h3>
+          <span class="text-muted small">посівів / полів</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gardens -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Садівництво</span>
+          <div
+            class="profile-icon bg-success-subtle text-success"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-tree fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{
+              totalGardens() !== null ? totalGardens() : '0'
+            }}</span>
+          </h3>
+          <span class="text-muted small">садових культур</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Задачі</span>
+          <div
+            class="profile-icon bg-primary-subtle text-primary"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-calendar-check fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{
+              totalPlanned() !== null ? totalPlanned() : '0'
+            }}</span>
+          </h3>
+          <span class="text-muted small">заплановано</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Сповіщення</span>
+          <div
+            class="profile-icon bg-danger-subtle text-danger"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-bell fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3 class="fw-bold mb-0 text-dark">
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{
+              totalUnreadAlerts() !== null ? totalUnreadAlerts() : '0'
+            }}</span>
+          </h3>
+          <span class="text-muted small">непрочитаних</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Financial Balance -->
+    <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+      <div
+        class="card card-custom p-3 border-0 shadow-sm h-100 d-flex flex-column justify-content-between"
+      >
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="text-secondary small fw-medium">Баланс (ост. 100)</span>
+          <div
+            class="profile-icon bg-success-subtle text-success"
+            style="width: 36px; height: 36px; border-radius: 8px"
+          >
+            <i class="bi bi-wallet2 fs-5"></i>
+          </div>
+        </div>
+        <div>
+          <h3
+            class="fw-bold mb-0"
+            [ngClass]="(financialBalance() || 0) >= 0 ? 'text-success' : 'text-danger'"
+          >
+            <span
+              *ngIf="loadingStats()"
+              class="spinner-border spinner-border-sm text-secondary"
+              role="status"
+            ></span>
+            <span *ngIf="!loadingStats()">{{
+              financialBalance() !== null ? (financialBalance() | number: '1.2-2') + ' ₴' : '0.00 ₴'
+            }}</span>
+          </h3>
+          <span class="text-muted small">дохід / витрати</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions & General Navigation -->
+  <div class="row g-4">
+    <div class="col-12 col-lg-8">
+      <div class="card card-custom border-0 shadow-sm h-100">
+        <div class="card-body p-4">
+          <h3 class="h5 fw-bold text-dark mb-4">Швидкі дії господарства</h3>
+          <div class="row g-3">
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/animals"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-piggy-bank fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Тваринництво</span>
+              </a>
+            </div>
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/crops"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-flower2 fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Рослинництво</span>
+              </a>
+            </div>
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/gardens"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-tree fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Садівництво</span>
+              </a>
+            </div>
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/planning"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-calendar-check fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Планувальник</span>
+              </a>
+            </div>
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/finances"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-cash-coin fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Фінанси</span>
+              </a>
+            </div>
+            <div class="col-6 col-sm-4">
+              <a
+                routerLink="/profile"
+                class="d-flex flex-column align-items-center justify-content-center p-3 border rounded text-decoration-none text-dark bg-light hover-shadow"
+                style="transition: all 0.2s"
+              >
+                <i class="bi bi-person-gear fs-2 text-success mb-2"></i>
+                <span class="fw-semibold small">Профіль ферми</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Side Widget: Current Farm Info -->
+    <div class="col-12 col-lg-4">
+      <div
+        class="card card-custom border-0 shadow-sm h-100 bg-success-subtle border-success-subtle"
+      >
+        <div class="card-body p-4 d-flex flex-column justify-content-between">
+          <div>
+            <h4 class="h5 fw-bold text-success-emphasis mb-3">Діяльність ферми</h4>
+            <p class="text-secondary small mb-3">
+              Ви перебуваєте в панелі керування фермою <strong>{{ farm()?.name }}</strong
+              >. Використовуйте верхнє меню та бічну панель для керування посівами, тваринами,
+              задачами та перевірки фінансових звітів.
+            </p>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between text-secondary small py-1 border-bottom">
+              <span>Дата реєстрації:</span>
+              <span class="fw-medium text-dark">{{ farm()?.createdAt | date: 'yyyy-MM-dd' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>

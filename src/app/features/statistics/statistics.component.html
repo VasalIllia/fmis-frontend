@@ -1,0 +1,690 @@
+<div class="container-fluid p-0">
+  <div class="mb-4">
+    <a
+      routerLink="/overview"
+      class="text-decoration-none"
+      style="color: var(--color-primary); font-weight: 500"
+    >
+      <i class="bi bi-arrow-left"></i> Повернутися на головну
+    </a>
+  </div>
+
+  <app-page-header
+    title="Статистика"
+    subtitle="Підсумки ферми за фінансами, тваринами, посівами та садівництвом"
+  >
+    <form
+      [formGroup]="filterForm"
+      (ngSubmit)="loadStatistics()"
+      class="d-flex gap-2 align-items-center"
+    >
+      <input
+        type="number"
+        class="form-control"
+        style="width: 120px"
+        formControlName="year"
+        min="2000"
+      />
+      <button type="submit" class="btn btn-primary-custom d-flex align-items-center gap-2">
+        <i class="bi bi-arrow-repeat"></i> Оновити
+      </button>
+    </form>
+  </app-page-header>
+
+  <app-loading-spinner *ngIf="loading(); else statisticsTpl" />
+
+  <ng-template #statisticsTpl>
+    <!-- ТАБИ НАВІГАЦІЇ -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="selectedTab() === 'General'"
+          (click)="setTab('General')"
+          style="cursor: pointer"
+        >
+          <i class="bi bi-house-door me-1"></i> Загальна
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="selectedTab() === 'Finances'"
+          (click)="setTab('Finances')"
+          style="cursor: pointer"
+        >
+          <i class="bi bi-wallet2 me-1"></i> Фінанси
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="selectedTab() === 'Animals'"
+          (click)="setTab('Animals')"
+          style="cursor: pointer"
+        >
+          <i class="bi bi-heptagon-half me-1"></i> Тваринництво
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="selectedTab() === 'Crops'"
+          (click)="setTab('Crops')"
+          style="cursor: pointer"
+        >
+          <i class="bi bi-flower1 me-1"></i> Рослинництво
+        </a>
+      </li>
+      <li class="nav-item">
+        <a
+          class="nav-link"
+          [class.active]="selectedTab() === 'Gardens'"
+          (click)="setTab('Gardens')"
+          style="cursor: pointer"
+        >
+          <i class="bi bi-tree me-1"></i> Садівництво
+        </a>
+      </li>
+    </ul>
+
+    <app-loading-spinner *ngIf="tabLoading()" />
+
+    <div *ngIf="selectedTab() === 'General' && !tabLoading()">
+      <section class="row g-3 mb-4" *ngIf="getCurrentYearData() as yearlyData">
+        <div class="col-md-3">
+          <article class="card-custom p-4 border-start border-4 border-success shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Чистий баланс</span
+            >
+            <h3
+              class="fw-bold mb-0"
+              [class.text-success]="(yearlyData.netAmount || 0) >= 0"
+              [class.text-danger]="(yearlyData.netAmount || 0) < 0"
+            >
+              {{ yearlyData.netAmount || 0 | number: '1.2-2' }} ₴
+            </h3>
+          </article>
+        </div>
+        <div class="col-md-3">
+          <article class="card-custom p-4 border-start border-4 border-primary shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Тварини (Додано)</span
+            >
+            <h3 class="fw-bold text-primary mb-0">{{ yearlyData.animalQuantity || 0 }}</h3>
+            <small class="text-muted"
+              >{{ yearlyData.animalRecordCount || 0 }} записів, народжено
+              {{ yearlyData.bornAnimalQuantity || 0 }}</small
+            >
+          </article>
+        </div>
+        <div class="col-md-3">
+          <article class="card-custom p-4 border-start border-4 border-warning shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Посіви (Додано)</span
+            >
+            <h3 class="fw-bold text-warning mb-0">{{ yearlyData.cropRecordCount || 0 }}</h3>
+            <small class="text-muted"
+              >Врожай: {{ formatUnitQuantities(yearlyData.cropHarvestsByUnit) }}</small
+            >
+          </article>
+        </div>
+        <div class="col-md-3">
+          <article class="card-custom p-4 border-start border-4 border-info shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Садівництво (Додано)</span
+            >
+            <h3 class="fw-bold text-info mb-0">{{ yearlyData.gardenRecordCount || 0 }}</h3>
+            <small class="text-muted"
+              >Врожай: {{ formatUnitQuantities(yearlyData.gardenHarvestsByUnit) }}</small
+            >
+          </article>
+        </div>
+      </section>
+
+      <section class="card-custom p-4 mb-4">
+        <h5 class="fw-bold mb-4">Динаміка прибутків та витрат (за роками)</h5>
+        <div style="display: block; width: 100%; height: 350px">
+          <canvas
+            baseChart
+            *ngIf="barChartData().datasets.length > 0"
+            [data]="barChartData()"
+            [options]="barChartOptions"
+            [type]="'bar'"
+          >
+          </canvas>
+          <div *ngIf="barChartData().datasets.length === 0" class="text-center text-muted py-5">
+            Немає достатньо даних для побудови графіку річної динаміки.
+          </div>
+        </div>
+      </section>
+
+      <section class="card-custom p-0 overflow-hidden">
+        <div class="p-3 border-bottom bg-white">
+          <h5 class="fw-bold mb-0">Річна динаміка (Таблиця)</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Рік</th>
+                <th>Доходи</th>
+                <th>Витрати</th>
+                <th>Баланс</th>
+                <th>Тварини (нові)</th>
+                <th>Посіви</th>
+                <th class="pe-3">Сади</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of yearly()">
+                <td class="ps-3 fw-bold">{{ row.year }}</td>
+                <td class="text-success">{{ row.incomeAmount | number: '1.2-2' }} ₴</td>
+                <td class="text-danger">{{ row.expenseAmount | number: '1.2-2' }} ₴</td>
+                <td
+                  class="fw-bold"
+                  [class.text-success]="row.netAmount >= 0"
+                  [class.text-danger]="row.netAmount < 0"
+                >
+                  {{ row.netAmount | number: '1.2-2' }} ₴
+                </td>
+                <td>{{ row.animalQuantity }}</td>
+                <td>{{ row.cropRecordCount }}</td>
+                <td class="pe-3">{{ row.gardenRecordCount }}</td>
+              </tr>
+              <tr *ngIf="yearly().length === 0">
+                <td colspan="7" class="text-center text-muted py-4">Немає даних</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div *ngIf="selectedTab() === 'Finances' && !tabLoading() && finances() as financeStats">
+      <section class="row g-3 mb-4">
+        <div class="col-md-6">
+          <article class="card-custom p-4 border-start border-4 border-success shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Загальна сума доходів</span
+            >
+            <h3 class="fw-bold text-success mb-0">
+              {{ financeStats.incomeAmount | number: '1.2-2' }} ₴
+            </h3>
+          </article>
+        </div>
+        <div class="col-md-6">
+          <article class="card-custom p-4 border-start border-4 border-danger shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Загальна сума витрат</span
+            >
+            <h3 class="fw-bold text-danger mb-0">
+              {{ financeStats.expenseAmount | number: '1.2-2' }} ₴
+            </h3>
+          </article>
+        </div>
+      </section>
+
+      <section class="row g-4 mb-4">
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Фінанси за модулями</h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Модуль</th>
+                    <th>Доходи</th>
+                    <th>Витрати</th>
+                    <th class="text-end pe-3">Баланс</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of financeStats.byModule || []">
+                    <td class="ps-3 fw-semibold">{{ getModuleLabel(row.moduleType) }}</td>
+                    <td class="text-success">{{ row.incomeAmount | number: '1.2-2' }} ₴</td>
+                    <td class="text-danger">{{ row.expenseAmount | number: '1.2-2' }} ₴</td>
+                    <td
+                      class="text-end pe-3 fw-bold"
+                      [class.text-success]="row.netAmount >= 0"
+                      [class.text-danger]="row.netAmount < 0"
+                    >
+                      {{ row.netAmount | number: '1.2-2' }} ₴
+                    </td>
+                  </tr>
+                  <tr *ngIf="!(financeStats.byModule || []).length">
+                    <td colspan="4" class="text-center text-muted py-4">Немає даних</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-custom p-4 h-100 d-flex flex-column">
+            <h5 class="fw-bold mb-4">Структура витрат за типом (Pie Chart)</h5>
+            <div
+              style="
+                flex-grow: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 250px;
+              "
+            >
+              <canvas
+                baseChart
+                *ngIf="pieChartData().datasets[0]?.data?.length"
+                [data]="pieChartData()"
+                [options]="pieChartOptions"
+                [type]="'pie'"
+              >
+              </canvas>
+              <div *ngIf="!pieChartData().datasets[0]?.data?.length" class="text-center text-muted">
+                Немає даних про витрати для побудови графіку
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-custom p-0 overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-white">
+          <h5 class="fw-bold mb-0">Деталізація за всіма категоріями</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Тип</th>
+                <th>Категорія</th>
+                <th>Записи</th>
+                <th class="text-end pe-3">Сума</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of financeStats.byType || []">
+                <td class="ps-3">
+                  <span
+                    class="badge"
+                    [class.bg-success]="row.kind === 'Income'"
+                    [class.bg-danger]="row.kind === 'Expense'"
+                  >
+                    {{ getFinanceKindLabel(row.kind) }}
+                  </span>
+                </td>
+                <td class="fw-semibold">{{ getFinanceTypeLabel(row.type) }}</td>
+                <td>{{ row.recordCount }}</td>
+                <td class="text-end pe-3 fw-bold">{{ row.amount | number: '1.2-2' }} ₴</td>
+              </tr>
+              <tr *ngIf="!(financeStats.byType || []).length">
+                <td colspan="4" class="text-center text-muted py-4">Немає даних</td>
+              </tr>
+              <tr class="table-light fw-bold" *ngIf="(financeStats.byType || []).length">
+                <td colspan="3" class="ps-3 text-end">Всього доходів:</td>
+                <td class="text-end pe-3 text-success">
+                  {{ financeStats.incomeAmount | number: '1.2-2' }} ₴
+                </td>
+              </tr>
+              <tr class="table-light fw-bold" *ngIf="(financeStats.byType || []).length">
+                <td colspan="3" class="ps-3 text-end">Всього витрат:</td>
+                <td class="text-end pe-3 text-danger">
+                  {{ financeStats.expenseAmount | number: '1.2-2' }} ₴
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div *ngIf="selectedTab() === 'Animals' && !tabLoading() && animals() as animalStats">
+      <section class="row g-3 mb-4">
+        <div class="col-md-4">
+          <article class="card-custom p-4 border-start border-4 border-primary shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Активні тварини</span
+            >
+            <h3 class="fw-bold text-primary mb-0">{{ animalStats.totalQuantity || 0 }}</h3>
+            <small class="text-muted">Загальна кількість голів</small>
+          </article>
+        </div>
+        <div class="col-md-4">
+          <article class="card-custom p-4 border-start border-4 border-success shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Продукція за рік</span
+            >
+            <h3 class="fw-bold text-success mb-0" style="font-size: 1.25rem">
+              {{ formatUnitQuantities(animalStats.products?.totalQuantityByUnit) }}
+            </h3>
+          </article>
+        </div>
+        <div class="col-md-4">
+          <article class="card-custom p-4 border-start border-4 border-info shadow-sm h-100">
+            <span class="text-secondary fw-semibold d-block mb-1" style="font-size: 0.85rem"
+              >Народжено в році</span
+            >
+            <h3 class="fw-bold text-info mb-0">{{ animalStats.bornInYearQuantity || 0 }}</h3>
+          </article>
+        </div>
+      </section>
+
+      <section class="card-custom p-4 mb-4" *ngIf="animalsProductsChartData()">
+        <h5 class="fw-bold mb-4">Вироблена продукція за типом тварини</h5>
+        <div style="display: block; width: 100%; height: 350px">
+          <canvas
+            baseChart
+            [data]="animalsProductsChartData()!"
+            [options]="productsChartOptions"
+            [type]="'bar'"
+          >
+          </canvas>
+        </div>
+      </section>
+
+      <section class="row g-4 mb-4">
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Кількість за видом</h5>
+              <small class="text-muted">Активні тварини (не загиблі та не забиті)</small>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Вид тварини</th>
+                    <th>Записи в системі</th>
+                    <th class="text-end pe-3">Загальна кількість голів</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let row of animalStats.byType || []"
+                    [class.table-light]="row.quantity === 0"
+                  >
+                    <td class="ps-3 fw-semibold">
+                      {{ getAnimalTypeLabel(row.type) }}
+                      <span *ngIf="row.quantity === 0" class="badge bg-secondary ms-2"
+                        >Дані відсутні</span
+                      >
+                    </td>
+                    <td [class.text-muted]="row.recordCount === 0">
+                      {{ row.recordCount }} записів
+                    </td>
+                    <td class="text-end pe-3 fw-bold" [class.text-muted]="row.quantity === 0">
+                      {{ row.quantity }}
+                    </td>
+                  </tr>
+                  <tr *ngIf="!(animalStats.byType || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Розподіл за статусами</h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Статус</th>
+                    <th>Записів</th>
+                    <th class="text-end pe-3">Кількість голів</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of animalStats.byStatus || []">
+                    <td class="ps-3 fw-semibold">{{ getAnimalStatusLabel(row.status) }}</td>
+                    <td>{{ row.recordCount }}</td>
+                    <td class="text-end pe-3 fw-bold">{{ row.quantity }}</td>
+                  </tr>
+                  <tr *ngIf="!(animalStats.byStatus || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-custom p-0 overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-white">
+          <h5 class="fw-bold mb-0">Продукція детально (за типом)</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Вид тварини</th>
+                <th>Кількість записів</th>
+                <th class="text-end pe-3">Вироблено продукції</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of animalStats.products?.byType || []">
+                <td class="ps-3 fw-semibold">{{ getAnimalTypeLabel(row.type) }}</td>
+                <td>{{ row.recordCount }}</td>
+                <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+              </tr>
+              <tr *ngIf="!(animalStats.products?.byType || []).length">
+                <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div *ngIf="selectedTab() === 'Crops' && !tabLoading() && crops() as cropStats">
+      <section class="card-custom p-4 mb-4" *ngIf="cropsHarvestsChartData()">
+        <h5 class="fw-bold mb-4">Зібраний врожай за культурою</h5>
+        <div style="display: block; width: 100%; height: 350px">
+          <canvas
+            baseChart
+            [data]="cropsHarvestsChartData()!"
+            [options]="productsChartOptions"
+            [type]="'bar'"
+          >
+          </canvas>
+        </div>
+      </section>
+
+      <section class="row g-4 mb-4">
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Посіви за культурою</h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Культура</th>
+                    <th>Кількість записів</th>
+                    <th class="text-end pe-3">Обсяг посіву</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of cropStats.byType || []">
+                    <td class="ps-3 fw-semibold">{{ getCropTypeLabel(row.type) }}</td>
+                    <td>{{ row.recordCount }}</td>
+                    <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+                  </tr>
+                  <tr *ngIf="!(cropStats.byType || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних за цей рік</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Розподіл за статусами</h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Статус</th>
+                    <th>Кількість записів</th>
+                    <th class="text-end pe-3">Обсяг</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of cropStats.byStatus || []">
+                    <td class="ps-3 fw-semibold">{{ getCropStatusLabel(row.status) }}</td>
+                    <td>{{ row.recordCount }}</td>
+                    <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+                  </tr>
+                  <tr *ngIf="!(cropStats.byStatus || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних за цей рік</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-custom p-0 overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-white">
+          <h5 class="fw-bold mb-0">Врожай по культурах (Деталізація)</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Культура</th>
+                <th>Кількість записів</th>
+                <th class="text-end pe-3">Зібраний врожай</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of cropStats.harvests?.byType || []">
+                <td class="ps-3 fw-semibold">{{ getCropTypeLabel(row.type) }}</td>
+                <td>{{ row.recordCount }}</td>
+                <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+              </tr>
+              <tr *ngIf="!(cropStats.harvests?.byType || []).length">
+                <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <div *ngIf="selectedTab() === 'Gardens' && !tabLoading() && gardens() as gardenStats">
+      <section class="card-custom p-4 mb-4" *ngIf="gardensHarvestsChartData()">
+        <h5 class="fw-bold mb-4">Зібраний врожай садівництва</h5>
+        <div style="display: block; width: 100%; height: 350px">
+          <canvas
+            baseChart
+            [data]="gardensHarvestsChartData()!"
+            [options]="productsChartOptions"
+            [type]="'bar'"
+          >
+          </canvas>
+        </div>
+      </section>
+
+      <section class="row g-4 mb-4">
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Рослини за культурою</h5>
+              <small class="text-muted">Загальна кількість рослин</small>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Культура</th>
+                    <th>Кількість записів</th>
+                    <th class="text-end pe-3">Кількість (шт/площа)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of gardenStats.byType || []">
+                    <td class="ps-3 fw-semibold">{{ getGardenTypeLabel(row.type) }}</td>
+                    <td>{{ row.recordCount }}</td>
+                    <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+                  </tr>
+                  <tr *ngIf="!(gardenStats.byType || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="card-custom p-0 overflow-hidden h-100">
+            <div class="p-3 border-bottom bg-white">
+              <h5 class="fw-bold mb-0">Розподіл за статусами</h5>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-3">Статус</th>
+                    <th>Кількість записів</th>
+                    <th class="text-end pe-3">Кількість (шт/площа)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of gardenStats.byStatus || []">
+                    <td class="ps-3 fw-semibold">{{ getGardenStatusLabel(row.status) }}</td>
+                    <td>{{ row.recordCount }}</td>
+                    <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+                  </tr>
+                  <tr *ngIf="!(gardenStats.byStatus || []).length">
+                    <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card-custom p-0 overflow-hidden mb-4">
+        <div class="p-3 border-bottom bg-white">
+          <h5 class="fw-bold mb-0">Врожай за вказаний рік (Деталізація)</h5>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-3">Культура</th>
+                <th>Кількість записів</th>
+                <th class="text-end pe-3">Зібраний врожай</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of gardenStats.harvests?.byType || []">
+                <td class="ps-3 fw-semibold">{{ getGardenTypeLabel(row.type) }}</td>
+                <td>{{ row.recordCount }}</td>
+                <td class="text-end pe-3">{{ formatUnitQuantities(row.quantitiesByUnit) }}</td>
+              </tr>
+              <tr *ngIf="!(gardenStats.harvests?.byType || []).length">
+                <td colspan="3" class="text-center text-muted py-4">Немає даних</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </ng-template>
+</div>

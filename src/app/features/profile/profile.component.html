@@ -1,0 +1,156 @@
+<div class="mb-4">
+  <a
+    routerLink="/overview"
+    class="text-decoration-none"
+    style="color: var(--color-primary); font-weight: 500"
+  >
+    <i class="bi bi-arrow-left"></i> Повернутися на головну
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <h2 class="mb-4 text-dark fw-bold">Налаштування профілю</h2>
+
+    <!-- Farm Settings -->
+    <div class="card card-custom mb-4">
+      <div class="card-body">
+        <h3 class="card-title h5 mb-4 text-dark">
+          <i class="bi bi-house-door"></i> Налаштування ферми
+        </h3>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <span class="text-secondary-custom d-block mb-1" style="font-size: 0.9rem"
+              >Назва ферми</span
+            >
+            <strong class="fs-5">{{ farm()?.name || 'Завантаження...' }}</strong>
+          </div>
+          <button
+            class="btn btn-outline-secondary btn-sm"
+            (click)="openChangeFarmNameModal()"
+            [disabled]="!farm()"
+          >
+            Змінити
+          </button>
+        </div>
+
+        <hr class="mb-4" style="border-color: var(--color-border)" />
+
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <strong class="d-block text-dark">Видалити ферму</strong>
+            <span class="text-secondary-custom" style="font-size: 0.85rem"
+              >Цю дію неможливо скасувати.</span
+            >
+          </div>
+          <button
+            class="btn btn-outline-danger btn-sm"
+            (click)="openDeleteFarmModal()"
+            [disabled]="!farm()"
+          >
+            Видалити
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Settings -->
+    <div class="card card-custom mb-4">
+      <div class="card-body">
+        <h3 class="card-title h5 mb-4 text-dark"><i class="bi bi-person"></i> Обліковий запис</h3>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <span class="text-secondary-custom d-block mb-1" style="font-size: 0.9rem">Email</span>
+            <strong>{{ email() }}</strong>
+          </div>
+          <span
+            class="badge"
+            [ngClass]="isEmailConfirmed() ? 'bg-success' : 'bg-warning text-dark'"
+          >
+            {{ isEmailConfirmed() ? 'Підтверджено' : 'Не підтверджено' }}
+          </span>
+        </div>
+
+        <div class="d-grid mb-4">
+          <button class="btn btn-outline-secondary" (click)="openChangePasswordDialog()">
+            Змінити пароль
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Change Farm Name -->
+<div
+  *ngIf="showChangeName"
+  class="modal d-block"
+  tabindex="-1"
+  style="background: rgba(0,0,0,0.5)"
+  (click)="closeChangeName()"
+>
+  <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title fw-bold">Змінити назву ферми</h5>
+        <button type="button" class="btn-close" aria-label="Close" (click)="closeChangeName()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label text-secondary-custom">Нова назва</label>
+          <input
+            type="text"
+            class="form-control"
+            [ngModel]="newFarmName()"
+            (ngModelChange)="newFarmName.set($event)"
+            placeholder="Введіть назву"
+          />
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" (click)="closeChangeName()">
+          Скасувати
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="saveFarmName()"
+          [disabled]="!newFarmName() || newFarmName().trim() === ''"
+        >
+          Зберегти
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Delete Farm Confirmation -->
+<div
+  *ngIf="showDeleteFarm"
+  class="modal d-block"
+  tabindex="-1"
+  style="background: rgba(0,0,0,0.5)"
+  (click)="closeDeleteFarm()"
+>
+  <div class="modal-dialog modal-dialog-centered modal-sm" (click)="$event.stopPropagation()">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <i class="bi bi-exclamation-triangle text-danger mb-3" style="font-size: 2.5rem"></i>
+        <h5 class="mb-3 fw-bold">Видалити ферму?</h5>
+        <p class="text-secondary-custom mb-4">
+          Ви точно хочете видалити ферму? Це може видалити або зробити недоступними пов'язані дані.
+        </p>
+        <div class="d-flex justify-content-center gap-2">
+          <button type="button" class="btn btn-outline-secondary px-4" (click)="closeDeleteFarm()">
+            Скасувати
+          </button>
+          <button type="button" class="btn btn-danger px-4" (click)="confirmDeleteFarm()">
+            Видалити
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

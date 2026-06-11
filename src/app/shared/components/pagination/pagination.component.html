@@ -1,0 +1,36 @@
+<nav aria-label="Пагінація" class="d-flex justify-content-between align-items-center mt-4">
+  <div class="text-muted" style="font-size: 0.9rem;">
+    Всього: <strong>{{ totalCount }}</strong> записів
+  </div>
+  <div class="d-inline-flex gap-1" *ngIf="totalPages > 1">
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      [disabled]="pageNumber === 1"
+      (click)="changePage(pageNumber - 1)"
+      aria-label="Попередня сторінка"
+    >
+      <i class="bi bi-chevron-left"></i>
+    </button>
+    <button
+      *ngFor="let p of pagesArray"
+      class="btn btn-sm"
+      [class.btn-success]="p === pageNumber"
+      [class.btn-outline-secondary]="p !== pageNumber && p !== '...'"
+      [class.btn-light]="p === '...'"
+      [class.text-muted]="p === '...'"
+      [disabled]="p === '...'"
+      [attr.aria-current]="p === pageNumber ? 'page' : null"
+      (click)="p !== '...' ? changePage($any(p)) : null"
+    >
+      {{ p }}
+    </button>
+    <button
+      class="btn btn-outline-secondary btn-sm"
+      [disabled]="pageNumber === totalPages"
+      (click)="changePage(pageNumber + 1)"
+      aria-label="Наступна сторінка"
+    >
+      <i class="bi bi-chevron-right"></i>
+    </button>
+  </div>
+</nav>

@@ -1,0 +1,248 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <header class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ animalId ? 'Редагувати тварину' : 'Додати тварину' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </header>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <form [formGroup]="animalForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        
+        <!-- Name -->
+        <div>
+          <label for="animalName" class="form-label fw-semibold">Кличка / Назва <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            id="animalName"
+            class="form-control"
+            formControlName="name"
+            placeholder="Наприклад: Бурьонка"
+            [class.is-invalid]="animalForm.get('name')?.touched && animalForm.get('name')?.invalid"
+          />
+          <div class="invalid-feedback">Назва є обов'язковою.</div>
+        </div>
+
+        <!-- Tag Number & Quantity -->
+        <div class="row">
+          <div class="col-6">
+            <label for="tagNumber" class="form-label fw-semibold">Бірка (Номер)</label>
+            <input
+              type="text"
+              id="tagNumber"
+              class="form-control"
+              formControlName="tagNumber"
+              placeholder="A-123"
+            />
+          </div>
+          <div class="col-6">
+            <label for="quantity" class="form-label fw-semibold">Кількість <span class="text-danger">*</span></label>
+            <input
+              type="number"
+              id="quantity"
+              class="form-control"
+              formControlName="quantity"
+              min="1"
+              [class.is-invalid]="animalForm.get('quantity')?.touched && animalForm.get('quantity')?.invalid"
+            />
+            <div class="invalid-feedback">Кількість повинна бути більше 0.</div>
+          </div>
+        </div>
+
+        <!-- Location Dropdown with Inline Add -->
+        <div>
+          <label for="locationId" class="form-label fw-semibold">Локація</label>
+          <div class="input-group">
+            <select id="locationId" class="form-select" formControlName="locationId">
+              <option [ngValue]="null">Без локації (Не вказано)</option>
+              <option *ngFor="let loc of locations()" [value]="loc.id">
+                {{ loc.name }}
+              </option>
+            </select>
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="openLocationModal()"
+              title="Додати нову локацію"
+            >
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+          <div class="mt-2 d-flex justify-content-between align-items-center" *ngIf="hasMoreLocations()">
+            <span class="text-muted" style="font-size: 0.8rem;">
+              Показано: {{ locations().length }} локацій
+            </span>
+            <button
+              type="button"
+              class="btn btn-link btn-sm text-success p-0 text-decoration-none fw-semibold"
+              (click)="loadMoreLocations()"
+              [disabled]="loadingMoreLocations()"
+            >
+              <span *ngIf="loadingMoreLocations()" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Завантажити ще 10...
+            </button>
+          </div>
+        </div>
+
+        <!-- Birth Date -->
+        <div>
+          <label for="birthDate" class="form-label fw-semibold">Дата народження</label>
+          <input
+            type="date"
+            id="birthDate"
+            class="form-control"
+            formControlName="birthDate"
+          />
+        </div>
+
+        <!-- Species, Sex, Status -->
+        <div class="row">
+          <div class="col-4">
+            <label for="species" class="form-label fw-semibold">Вид</label>
+            <select id="species" class="form-select" formControlName="species">
+              <option *ngFor="let spec of speciesOptions" [value]="spec.value">
+                {{ spec.label }}
+              </option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label for="sex" class="form-label fw-semibold">Стать</label>
+            <select id="sex" class="form-select" formControlName="sex">
+              <option *ngFor="let s of sexOptions" [value]="s.value">
+                {{ s.label }}
+              </option>
+            </select>
+          </div>
+          <div class="col-4">
+            <label for="status" class="form-label fw-semibold">Статус</label>
+            <select id="status" class="form-select" formControlName="status">
+              <option *ngFor="let st of statusOptions" [value]="st.value">
+                {{ st.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Опис</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Примітки чи коментарі..."
+          ></textarea>
+        </div>
+
+        <!-- birthMatingId as Dropdown -->
+        <div>
+          <label for="birthMatingId" class="form-label fw-semibold text-muted" style="font-size: 0.9rem">
+            Спарювання при народженні (батьки)
+          </label>
+          <select id="birthMatingId" class="form-select" formControlName="birthMatingId">
+            <option [ngValue]="null">Не вказано (Без спарювання)</option>
+            <option *ngFor="let mating of completedMatings()" [value]="mating.id">
+              {{ getAnimalNameFromId(mating.femaleAnimalId) }} - Мати та {{ getAnimalNameFromId(mating.maleAnimalId) }} - Батько від {{ mating.matingDate | date:'yyyy-MM-dd' }}
+            </option>
+          </select>
+          <div class="mt-2 d-flex justify-content-between align-items-center" *ngIf="hasMoreMatings()">
+            <span class="text-muted" style="font-size: 0.8rem;">
+              Показано: {{ completedMatings().length }} спарювань
+            </span>
+            <button
+              type="button"
+              class="btn btn-link btn-sm text-success p-0 text-decoration-none fw-semibold"
+              (click)="loadMoreMatings()"
+              [disabled]="loadingMoreMatings()"
+            >
+              <span *ngIf="loadingMoreMatings()" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Завантажити ще 10...
+            </button>
+          </div>
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="animalForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>
+
+<!-- Nested Add Location Modal -->
+<div *ngIf="isLocationModalOpen()" class="modal fade show d-block" tabindex="-1" style="background: rgba(34, 48, 37, 0.55); z-index: 1060; backdrop-filter: blur(2px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold">Нова локація</h5>
+        <button type="button" class="btn-close" (click)="closeLocationModal()"></button>
+      </div>
+      <form [formGroup]="locationForm" (ngSubmit)="onSubmitLocation()">
+        <div class="modal-body py-4">
+          <div class="mb-3">
+            <label for="newLocName" class="form-label fw-medium">Назва локації <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              id="newLocName"
+              class="form-control"
+              formControlName="name"
+              placeholder="Наприклад: Загін 2"
+              [class.is-invalid]="locationForm.get('name')?.touched && locationForm.get('name')?.invalid"
+            />
+            <div class="invalid-feedback">Назва локації є обов'язковою.</div>
+          </div>
+          <div class="mb-0">
+            <label for="newLocDesc" class="form-label fw-medium">Опис</label>
+            <textarea
+              id="newLocDesc"
+              class="form-control"
+              formControlName="description"
+              rows="3"
+              placeholder="Опис локації..."
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeLocationModal()" [disabled]="submittingLocation()">Скасувати</button>
+          <button type="submit" class="btn btn-success d-flex align-items-center gap-2" [disabled]="locationForm.invalid || submittingLocation()">
+            <span *ngIf="submittingLocation()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Створити
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,383 @@
+<!-- Mobile Navbar -->
+<nav class="navbar navbar-light bg-white border-bottom d-lg-none sticky-top px-3">
+  <button
+    class="navbar-toggler border-0 px-0"
+    type="button"
+    aria-controls="mobileMenu"
+    [attr.aria-expanded]="isMobileMenuOpen()"
+    aria-label="Відкрити меню"
+    (click)="openMobileMenu()"
+  >
+    <span class="navbar-toggler-icon"></span>
+  </button>
+  <span class="navbar-brand mb-0 h1">
+    <ng-container *ngIf="loadingFarm()">Завантаження...</ng-container>
+    <ng-container *ngIf="!loadingFarm() && farm()">Ферма: {{ farm()?.name }}</ng-container>
+    <ng-container *ngIf="!loadingFarm() && !farm()">Farma</ng-container>
+  </span>
+  
+  <!-- Mobile Notifications Bell -->
+  <div class="position-relative" *ngIf="authService.farmId()">
+    <button 
+      class="btn btn-link text-dark position-relative p-1" 
+      (click)="toggleNotifications($event)"
+      style="text-decoration: none;"
+      aria-label="Сповіщення"
+    >
+      <i class="bi bi-bell fs-4"></i>
+      <span 
+        *ngIf="unreadCount() > 0" 
+        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+        style="font-size: 0.65rem; padding: 2px 5px;"
+      >
+        {{ unreadCount() }}
+      </span>
+    </button>
+    <!-- Notifications Popover for mobile -->
+    <div 
+      *ngIf="showNotificationsPopover()" 
+      class="card position-absolute shadow-lg border" 
+      style="right: 0; width: 280px; z-index: 1050; margin-top: 8px; border-radius: 8px;"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
+        <span>Нові сповіщення</span>
+        <span class="badge bg-secondary-subtle text-dark" style="font-size: 0.75rem;">
+          {{ unreadCount() }}
+        </span>
+      </div>
+      <div class="list-group list-group-flush overflow-auto" style="max-height: 200px;">
+        <div *ngIf="unreadNotifications().length === 0" class="p-3 text-center text-muted small">
+          Нових сповіщень немає
+        </div>
+        <div 
+          *ngFor="let note of unreadNotifications()" 
+          class="list-group-item p-2 d-flex flex-column gap-1 align-items-start border-bottom position-relative"
+        >
+          <div class="d-flex w-100 justify-content-between align-items-center">
+            <span class="fw-semibold text-dark small" style="max-width: 80%; word-break: break-word;">
+              {{ note.planItemTitle }}
+            </span>
+          </div>
+          <p class="text-secondary mb-1 small" style="word-break: break-word; font-size: 0.8rem;">
+            {{ note.planItemDescription || 'Немає опису' }}
+          </p>
+          <div class="d-flex w-100 justify-content-between align-items-center mt-1">
+            <span class="text-muted" style="font-size: 0.7rem;">
+              {{ note.notifyAt | date:'yyyy-MM-dd HH:mm' }}
+            </span>
+            <button 
+              class="btn btn-sm btn-link text-success p-0" 
+              (click)="markAsRead(note, $event)"
+              style="font-size: 0.75rem; text-decoration: none;"
+            >
+              Прочитано
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-footer text-center bg-white py-2 border-top">
+        <a routerLink="/notifications" class="text-success text-decoration-none small fw-medium" (click)="showNotificationsPopover.set(false)">
+          Всі сповіщення
+        </a>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div
+  class="mobile-menu-backdrop d-lg-none"
+  [class.show]="isMobileMenuOpen()"
+  (click)="closeMobileMenu()"
+  aria-hidden="true"
+></div>
+<div
+  class="mobile-menu-panel d-lg-none"
+  [class.show]="isMobileMenuOpen()"
+  tabindex="-1"
+  id="mobileMenu"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Головне меню"
+>
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-primary">Farma</h5>
+    <button
+      type="button"
+      class="btn-close text-reset"
+      aria-label="Закрити"
+      (click)="closeMobileMenu()"
+    ></button>
+  </div>
+  <div class="offcanvas-body d-flex flex-column p-0 py-3">
+    <a
+      routerLink="/overview"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-house-door"></i> Головна
+    </a>
+    <a
+      [routerLink]="moduleLink('/animals')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-piggy-bank"></i> Тваринництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/crops')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-flower2"></i> Рослинництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/gardens')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-tree"></i> Садівництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/planning')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-calendar-check"></i> Планувальник
+    </a>
+    <a
+      [routerLink]="moduleLink('/finances')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-cash-coin"></i> Фінанси
+    </a>
+    <a
+      [routerLink]="moduleLink('/statistics')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      (click)="closeMobileMenu()"
+    >
+      <i class="bi bi-bar-chart-line"></i> Статистика
+    </a>
+
+    <div class="mt-auto pt-3 border-top">
+      <a
+        [routerLink]="moduleLink('/profile')"
+        class="sidebar-nav-link"
+        [class.disabled]="!authService.farmId()"
+        [attr.aria-disabled]="!authService.farmId()"
+        (click)="closeMobileMenu()"
+      >
+        <i class="bi bi-person-circle"></i> Профіль
+      </a>
+      <a href="javascript:void(0)" class="sidebar-nav-link text-danger" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i> Вийти
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Desktop Sidebar -->
+<aside class="app-sidebar d-none d-lg-flex">
+  <div class="p-4">
+    <h3 class="fw-bold text-primary mb-0" style="color: var(--color-primary) !important">
+      Farma
+    </h3>
+  </div>
+
+  <nav class="flex-grow-1 mt-2">
+    <a routerLink="/overview" routerLinkActive="active" class="sidebar-nav-link">
+      <i class="bi bi-house-door"></i> Головна
+    </a>
+    <a
+      [routerLink]="moduleLink('/animals')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-piggy-bank"></i> Тваринництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/crops')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-flower2"></i> Рослинництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/gardens')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-tree"></i> Садівництво
+    </a>
+    <a
+      [routerLink]="moduleLink('/planning')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-calendar-check"></i> Планувальник
+    </a>
+    <a
+      [routerLink]="moduleLink('/finances')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-cash-coin"></i> Фінанси
+    </a>
+    <a
+      [routerLink]="moduleLink('/statistics')"
+      routerLinkActive="active"
+      class="sidebar-nav-link"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+    >
+      <i class="bi bi-bar-chart-line"></i> Статистика
+    </a>
+  </nav>
+
+  <div class="mt-auto pb-4">
+    <a
+      [routerLink]="moduleLink('/profile')"
+      class="profile-bubble text-decoration-none text-dark d-flex mb-2"
+      [class.disabled]="!authService.farmId()"
+      [attr.aria-disabled]="!authService.farmId()"
+      style="margin: 0 16px 8px 16px;"
+    >
+      <div class="profile-icon">
+        <i class="bi bi-person"></i>
+      </div>
+      <div class="d-flex flex-column" style="line-height: 1.2">
+        <span class="fw-semibold">Профіль</span>
+        <span class="text-secondary" style="font-size: 0.8rem">Налаштування ферми</span>
+      </div>
+    </a>
+    <a href="javascript:void(0)" class="sidebar-nav-link text-danger" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i> Вийти
+    </a>
+  </div>
+</aside>
+
+<!-- Main Content Area -->
+<div class="app-main-content bg-light">
+  <!-- Desktop Header -->
+  <header class="d-none d-lg-flex align-items-center justify-content-between bg-white border-bottom px-4 py-3 sticky-top">
+    <div>
+      <h4 class="mb-1 fw-bold text-dark">
+        <ng-container *ngIf="loadingFarm()">Завантаження ферми...</ng-container>
+        <ng-container *ngIf="!loadingFarm() && farm()">Ферма: {{ farm()?.name }}</ng-container>
+        <ng-container *ngIf="!loadingFarm() && !farm()">Створення ферми</ng-container>
+      </h4>
+      <p class="mb-0 text-secondary" style="font-size: 0.9rem">
+        Керуйте модулями фермерського господарства
+      </p>
+    </div>
+
+    <!-- Desktop Notifications Bell -->
+    <div class="position-relative" *ngIf="authService.farmId()">
+      <button 
+        class="btn btn-link text-dark position-relative p-2" 
+        (click)="toggleNotifications($event)"
+        style="text-decoration: none;"
+        aria-label="Сповіщення"
+      >
+        <i class="bi bi-bell fs-4"></i>
+        <span 
+          *ngIf="unreadCount() > 0" 
+          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+          style="font-size: 0.7rem; padding: 4px 6px;"
+        >
+          {{ unreadCount() }}
+        </span>
+      </button>
+
+      <!-- Notifications Popover -->
+      <div 
+        *ngIf="showNotificationsPopover()" 
+        class="card position-absolute shadow-lg border" 
+        style="right: 0; width: 320px; z-index: 1050; margin-top: 8px; border-radius: 8px;"
+        (click)="$event.stopPropagation()"
+      >
+        <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center py-2">
+          <span>Нові сповіщення</span>
+          <span class="badge bg-secondary-subtle text-dark" style="font-size: 0.75rem;">
+            {{ unreadCount() }}
+          </span>
+        </div>
+        <div class="list-group list-group-flush overflow-auto" style="max-height: 250px;">
+          <div *ngIf="unreadNotifications().length === 0" class="p-3 text-center text-muted small">
+            Нових сповіщень немає
+          </div>
+          <div 
+            *ngFor="let note of unreadNotifications()" 
+            class="list-group-item p-3 d-flex flex-column gap-1 align-items-start border-bottom position-relative"
+          >
+            <div class="d-flex w-100 justify-content-between align-items-center">
+              <span class="fw-semibold text-dark small" style="max-width: 80%; word-break: break-word;">
+                {{ note.planItemTitle }}
+              </span>
+              <span class="badge bg-warning-subtle text-warning small border" style="font-size: 0.65rem;" *ngIf="note.planPriority === 'High'">
+                Важливо
+              </span>
+            </div>
+            <p class="text-secondary mb-1 small" style="word-break: break-word;">
+              {{ note.planItemDescription || 'Немає опису' }}
+            </p>
+            <div class="d-flex w-100 justify-content-between align-items-center mt-1">
+              <span class="text-muted" style="font-size: 0.75rem;">
+                {{ note.notifyAt | date:'yyyy-MM-dd HH:mm' }}
+              </span>
+              <button 
+                class="btn btn-sm btn-link text-success p-0" 
+                (click)="markAsRead(note, $event)"
+                style="font-size: 0.75rem; text-decoration: none;"
+              >
+                Прочитано
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer text-center bg-white py-2 border-top">
+          <a routerLink="/notifications" class="text-success text-decoration-none small fw-medium" (click)="showNotificationsPopover.set(false)">
+            Переглянути всі сповіщення
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="p-4 flex-grow-1">
+    <router-outlet></router-outlet>
+  </main>
+</div>
+
+<app-toast-container></app-toast-container>

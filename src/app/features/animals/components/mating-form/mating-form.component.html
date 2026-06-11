@@ -1,0 +1,254 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <header class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ matingId ? 'Редагувати запис спарювання' : 'Створити спарювання' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </header>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <!-- Context Animal Preview -->
+      <div class="alert alert-success border-0 bg-success-subtle text-success-emphasis mb-4" *ngIf="selectedAnimal">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-info-circle-fill"></i>
+          <strong class="text-success-emphasis">Вибрана тварина:</strong>
+          <span>{{ selectedAnimal.name }} ({{ selectedAnimal.tagNumber || 'Без бірки' }})</span>
+        </div>
+        <div style="font-size: 0.85rem;">
+          Вид: <strong>{{ getSpeciesLabel(selectedAnimal.species) }}</strong> · 
+          Стать: <strong>{{ getSexLabel(selectedAnimal.sex) }}</strong>
+        </div>
+      </div>
+
+      <!-- Warnings -->
+      <div class="alert alert-warning border-0 bg-warning-subtle text-warning-emphasis mb-3" *ngIf="selectedAnimal && selectedAnimal.sex === 'Unknown'">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Стать тварини "Невідома". Будь ласка, оберіть її роль вручну або оновіть стать тварини.
+      </div>
+
+      <form [formGroup]="matingForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Role Selector (if opened with context) -->
+        <div *ngIf="selectedAnimal && selectedAnimal.sex !== 'Unknown'" class="mb-2">
+          <label class="form-label fw-semibold">Роль для {{ selectedAnimal.name }}</label>
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn flex-grow-1"
+              [class.btn-success]="matingRole() === 'mother'"
+              [class.btn-outline-secondary]="matingRole() !== 'mother'"
+              [disabled]="selectedAnimal.sex === 'Male'"
+              (click)="setMatingRole('mother')"
+            >
+              Мати
+            </button>
+            <button
+              type="button"
+              class="btn flex-grow-1"
+              [class.btn-success]="matingRole() === 'father'"
+              [class.btn-outline-secondary]="matingRole() !== 'father'"
+              [disabled]="selectedAnimal.sex === 'Female'"
+              (click)="setMatingRole('father')"
+            >
+              Батько
+            </button>
+          </div>
+        </div>
+
+        <!-- Female (Mother) Dropdown -->
+        <div>
+          <label for="femaleAnimalId" class="form-label fw-semibold">Мати (Female) <span class="text-danger">*</span></label>
+          <div class="dropdown" [class.is-invalid]="matingForm.get('femaleAnimalId')?.touched && matingForm.get('femaleAnimalId')?.invalid">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6;" [class.border-danger]="matingForm.get('femaleAnimalId')?.touched && matingForm.get('femaleAnimalId')?.invalid">
+              <span class="text-truncate">{{ getSelectedFemaleAnimalName() || 'Виберіть самку...' }}</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+              <li>
+                <a class="dropdown-item" href="javascript:void(0)" (click)="matingForm.patchValue({femaleAnimalId: null})">
+                  <span class="text-muted">Виберіть самку...</span>
+                </a>
+              </li>
+              <li *ngIf="femaleAnimals().length > 0"><hr class="dropdown-divider"></li>
+              <li *ngFor="let female of femaleAnimals()">
+                <a class="dropdown-item" href="javascript:void(0)" (click)="!femaleDisabled(female.id) && matingForm.patchValue({femaleAnimalId: female.id})" [class.active]="matingForm.get('femaleAnimalId')?.value === female.id" [class.disabled]="femaleDisabled(female.id)">
+                  {{ female.name }} <span class="text-muted small ms-1" *ngIf="female.tagNumber">#{{ female.tagNumber }}</span> · {{ getSpeciesLabel(female.species) }}
+                </a>
+              </li>
+              <li *ngIf="hasMoreFemales()">
+                <hr class="dropdown-divider">
+                <div class="px-2 py-1">
+                  <button type="button" class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center" (click)="loadMoreFemales(); $event.stopPropagation()" [disabled]="loadingMoreFemales()">
+                    <span *ngIf="loadingMoreFemales()" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Завантажити ще 10...
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="invalid-feedback">Мати є обов'язковою для вибору.</div>
+        </div>
+
+        <!-- Male (Father) Dropdown -->
+        <div>
+          <label for="maleAnimalId" class="form-label fw-semibold">Батько (Male) <span class="text-danger">*</span></label>
+          <div class="dropdown" [class.is-invalid]="matingForm.get('maleAnimalId')?.touched && matingForm.get('maleAnimalId')?.invalid">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6;" [class.border-danger]="matingForm.get('maleAnimalId')?.touched && matingForm.get('maleAnimalId')?.invalid">
+              <span class="text-truncate">{{ getSelectedMaleAnimalName() || 'Виберіть самця...' }}</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+              <li>
+                <a class="dropdown-item" href="javascript:void(0)" (click)="matingForm.patchValue({maleAnimalId: null})">
+                  <span class="text-muted">Виберіть самця...</span>
+                </a>
+              </li>
+              <li *ngIf="maleAnimals().length > 0"><hr class="dropdown-divider"></li>
+              <li *ngFor="let male of maleAnimals()">
+                <a class="dropdown-item" href="javascript:void(0)" (click)="!maleDisabled(male.id) && matingForm.patchValue({maleAnimalId: male.id})" [class.active]="matingForm.get('maleAnimalId')?.value === male.id" [class.disabled]="maleDisabled(male.id)">
+                  {{ male.name }} <span class="text-muted small ms-1" *ngIf="male.tagNumber">#{{ male.tagNumber }}</span> · {{ getSpeciesLabel(male.species) }}
+                </a>
+              </li>
+              <li *ngIf="hasMoreMales()">
+                <hr class="dropdown-divider">
+                <div class="px-2 py-1">
+                  <button type="button" class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center" (click)="loadMoreMales(); $event.stopPropagation()" [disabled]="loadingMoreMales()">
+                    <span *ngIf="loadingMoreMales()" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Завантажити ще 10...
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="invalid-feedback">Батько є обов'язковим для вибору.</div>
+        </div>
+
+        <!-- Mating Date -->
+        <div>
+          <label for="matingDate" class="form-label fw-semibold">Дата спарювання <span class="text-danger">*</span></label>
+          <input
+            type="date"
+            id="matingDate"
+            class="form-control"
+            formControlName="matingDate"
+            (change)="onMatingDateChange()"
+            [class.is-invalid]="matingForm.get('matingDate')?.touched && matingForm.get('matingDate')?.invalid"
+          />
+          <div class="invalid-feedback">Дата спарювання є обов'язковою.</div>
+        </div>
+
+        <!-- Expected Birth Date -->
+        <div>
+          <label for="expectedBirthDate" class="form-label fw-semibold">Очікувана дата народження <span class="text-danger">*</span></label>
+          <input
+            type="date"
+            id="expectedBirthDate"
+            class="form-control"
+            formControlName="expectedBirthDate"
+            [class.is-invalid]="matingForm.get('expectedBirthDate')?.touched && matingForm.get('expectedBirthDate')?.invalid"
+          />
+          <div class="invalid-feedback">
+            Очікувана дата обов'язкова та не може бути раніше дати спарювання.
+          </div>
+        </div>
+
+        <!-- Actual Birth Date -->
+        <div>
+          <label for="actualBirthDate" class="form-label fw-semibold">Фактична дата народження</label>
+          <input
+            type="date"
+            id="actualBirthDate"
+            class="form-control"
+            formControlName="actualBirthDate"
+            [class.is-invalid]="matingForm.get('actualBirthDate')?.touched && matingForm.get('actualBirthDate')?.invalid"
+          />
+          <div class="invalid-feedback">
+            Фактична дата не може бути раніше дати спарювання. Обов'язкова при статусі "Народилося".
+          </div>
+        </div>
+
+        <!-- Mating Status -->
+        <div>
+          <label for="status" class="form-label fw-semibold">Статус</label>
+          <select id="status" class="form-select" formControlName="status" (change)="onStatusChange()">
+            <option *ngFor="let st of statusOptions" [value]="st.value">
+              {{ st.label }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="matingDesc" class="form-label fw-semibold">Опис / Нотатки</label>
+          <textarea
+            id="matingDesc"
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Примітки..."
+          ></textarea>
+        </div>
+
+        <!-- Number of Offspring -->
+        <div *ngIf="matingForm.get('status')?.value === 'BirthRecorded'" class="mb-3">
+          <label for="numberOfOffspring" class="form-label fw-semibold">Кількість приплоду (особин)</label>
+          <input
+            type="number"
+            id="numberOfOffspring"
+            class="form-control"
+            formControlName="numberOfOffspring"
+            min="0"
+            step="1"
+            [class.is-invalid]="matingForm.get('numberOfOffspring')?.touched && matingForm.get('numberOfOffspring')?.invalid"
+          />
+          <div class="invalid-feedback">Кількість приплоду повинна бути невід'ємною.</div>
+        </div>
+
+        <!-- Reminder Checkbox -->
+        <div class="form-check mt-3 mb-2" *ngIf="!matingId">
+          <input type="checkbox" id="createTaskAndNotification" class="form-check-input" formControlName="createTaskAndNotification" />
+          <label for="createTaskAndNotification" class="form-check-label fw-semibold text-success">
+            Створити нагадування про очікувану дату народження в планувальнику
+          </label>
+        </div>
+
+        <!-- Custom Form Errors -->
+        <div class="alert alert-danger border-0 py-2" *ngIf="matingForm.errors?.['sameAnimals']">
+          <i class="bi bi-x-circle-fill me-2"></i> Мати та Батько не можуть бути однією твариною.
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="matingForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>

@@ -1,0 +1,137 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <header class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ medicalInfoId ? 'Редагувати медичний запис' : 'Додати медичний запис' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </header>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <!-- Context Animal Preview -->
+      <div class="alert alert-success border-0 bg-success-subtle text-success-emphasis mb-4" *ngIf="selectedAnimal">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-info-circle-fill"></i>
+          <strong class="text-success-emphasis">Вибрана тварина:</strong>
+          <span>{{ selectedAnimal.name }} ({{ selectedAnimal.tagNumber || 'Без бірки' }})</span>
+        </div>
+      </div>
+
+      <form [formGroup]="medForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Animal Select (if not in context of single animal details) -->
+        <div *ngIf="!selectedAnimal">
+          <label for="animalId" class="form-label fw-semibold">Виберіть тварину <span class="text-danger">*</span></label>
+          <div class="dropdown" [class.is-invalid]="medForm.get('animalId')?.touched && medForm.get('animalId')?.invalid">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6;" [class.border-danger]="medForm.get('animalId')?.touched && medForm.get('animalId')?.invalid">
+              <span class="text-truncate">{{ getSelectedAnimalName() || 'Оберіть тварину...' }}</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+              <li>
+                <a class="dropdown-item" href="javascript:void(0)" (click)="medForm.patchValue({animalId: null})">
+                  <span class="text-muted">Оберіть тварину...</span>
+                </a>
+              </li>
+              <li *ngIf="allAnimals().length > 0"><hr class="dropdown-divider"></li>
+              <li *ngFor="let a of allAnimals()">
+                <a class="dropdown-item" href="javascript:void(0)" (click)="medForm.patchValue({animalId: a.id})" [class.active]="medForm.get('animalId')?.value === a.id">
+                  {{ a.name }} <span class="text-muted small ms-1" *ngIf="a.tagNumber">#{{ a.tagNumber }}</span>
+                </a>
+              </li>
+              <li *ngIf="hasMoreAnimals()">
+                <hr class="dropdown-divider">
+                <div class="px-2 py-1">
+                  <button type="button" class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center" (click)="loadMoreAnimals(); $event.stopPropagation()" [disabled]="loadingMoreAnimals()">
+                    <span *ngIf="loadingMoreAnimals()" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Завантажити ще 10...
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="invalid-feedback">Вибір тварини є обов'язковим.</div>
+        </div>
+
+        <!-- Title -->
+        <div>
+          <label for="title" class="form-label fw-semibold">Назва процедури / Діагноз <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            id="title"
+            class="form-control"
+            formControlName="title"
+            placeholder="Наприклад: Вакцинація проти сказу, Огляд ветеринара"
+            [class.is-invalid]="medForm.get('title')?.touched && medForm.get('title')?.invalid"
+          />
+          <div class="invalid-feedback">Назва процедури є обов'язковою.</div>
+        </div>
+
+        <!-- Procedure Date -->
+        <div>
+          <label for="procedureDate" class="form-label fw-semibold">Дата проведення <span class="text-danger">*</span></label>
+          <input
+            type="date"
+            id="procedureDate"
+            class="form-control"
+            formControlName="procedureDate"
+            [class.is-invalid]="medForm.get('procedureDate')?.touched && medForm.get('procedureDate')?.invalid"
+          />
+          <div class="invalid-feedback">Дата проведення є обов'язковою.</div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Опис / Нотатки ветеринара</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="4"
+            placeholder="Деталі процедури, препарати, дозування, призначення..."
+          ></textarea>
+        </div>
+
+        <!-- Reminder Checkbox -->
+        <div class="form-check mt-3 mb-2" *ngIf="!medicalInfoId">
+          <input type="checkbox" id="createTaskAndNotification" class="form-check-input" formControlName="createTaskAndNotification" />
+          <label for="createTaskAndNotification" class="form-check-label fw-semibold text-success">
+            Створити нагадування про наступний огляд в планувальнику
+          </label>
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="medForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>

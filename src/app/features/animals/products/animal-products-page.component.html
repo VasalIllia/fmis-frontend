@@ -1,0 +1,696 @@
+<div class="container-fluid p-0">
+  <!-- Breadcrumbs and Header -->
+  <div
+    class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4"
+  >
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item">
+            <a routerLink="/animals" class="text-decoration-none text-success">Тварини</a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Уся продукція</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold text-dark mb-0">Облік та продаж продукції</h2>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+        <i
+          class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+        ></i>
+        <input
+          type="text"
+          class="form-control ps-5"
+          placeholder="Пошук за назвою..."
+          [value]="filterForm.get('Search')?.value || ''"
+          (input)="onSearchInputChange($event)"
+        />
+      </div>
+      <button
+        class="btn btn-outline-secondary d-flex align-items-center gap-2"
+        (click)="toggleFilters()"
+      >
+        <i class="bi bi-funnel"></i> Фільтри
+      </button>
+      <button
+        class="btn btn-primary-custom d-flex align-items-center gap-2"
+        (click)="openProductModal()"
+      >
+        <i class="bi bi-plus-lg"></i> Зареєструвати продукцію
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <div *ngIf="loading(); else contentTpl" class="text-center py-5 bg-white border rounded-3">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #contentTpl>
+      <!-- Empty State -->
+      <app-empty-state
+        *ngIf="products().length === 0"
+        icon="bi-box"
+        title="Продукції не знайдено"
+        message="Зареєструйте збір молока, вовни чи іншої продукції."
+        actionLabel="Зареєструвати продукцію"
+        (action)="openProductModal()"
+      />
+
+      <!-- Products List -->
+      <div *ngIf="products().length > 0">
+        <!-- Desktop Table View -->
+        <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4">Продукт</th>
+                  <th>Тварина</th>
+                  <th>Залишок на складі</th>
+                  <th>Використано</th>
+                  <th>Одиниця</th>
+                  <th>Дата отримання</th>
+                  <th>Опис</th>
+                  <th class="text-end pe-4">Дії</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let prod of products()">
+                  <td class="ps-4 fw-semibold text-dark">{{ prod.name }}</td>
+                  <td>
+                    <a
+                      [routerLink]="['/animals', prod.animalId]"
+                      class="text-success text-decoration-none fw-semibold"
+                    >
+                      {{ prod.animalName || 'Тварина #' + prod.animalId }}
+                    </a>
+                  </td>
+                  <td class="fw-bold" [class.text-danger]="prod.quantity === 0">
+                    {{ prod.quantity }}
+                  </td>
+                  <td class="text-secondary fw-semibold">{{ prod.usedQuantity }}</td>
+                  <td class="text-secondary">{{ getUnitLabel(prod.unit) }}</td>
+                  <td>{{ prod.producedAt | date: 'yyyy-MM-dd' }}</td>
+                  <td class="text-secondary">{{ prod.description || '—' }}</td>
+                  <td class="text-end pe-4">
+                    <div class="d-inline-flex gap-2">
+                      <button
+                        class="btn btn-sm btn-success text-white d-flex align-items-center gap-1"
+                        [disabled]="prod.quantity <= 0"
+                        (click)="openSellModal(prod)"
+                        title="Продати продукцію"
+                      >
+                        <i class="bi bi-currency-dollar"></i> Продати
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-primary"
+                        (click)="openProductModal(prod)"
+                        title="Редагувати"
+                      >
+                        <i class="bi bi-pencil"></i>
+                      </button>
+                      <button
+                        class="btn btn-sm btn-outline-danger"
+                        (click)="confirmDelete(prod)"
+                        title="Видалити"
+                      >
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Mobile Cards Layout -->
+        <div class="d-md-none d-flex flex-column gap-3">
+          <article class="card-custom p-3 shadow-sm" *ngFor="let prod of products()">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h5 class="fw-bold text-dark mb-1">{{ prod.name }}</h5>
+                <span class="badge bg-light text-dark border">
+                  {{ getUnitLabel(prod.unit) }}
+                </span>
+              </div>
+              <div class="dropdown">
+                <button
+                  class="btn btn-link text-muted p-0"
+                  type="button"
+                  (click)="toggleMobileMenu(prod.id, $event)"
+                >
+                  <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                </button>
+                <ul
+                  class="dropdown-menu dropdown-menu-end"
+                  [class.show]="activeMobileMenuId() === prod.id"
+                  style="right: 0; left: auto"
+                  (click)="$event.stopPropagation()"
+                >
+                  <li>
+                    <button
+                      class="dropdown-item text-success"
+                      [disabled]="prod.quantity <= 0"
+                      (click)="openSellModal(prod); activeMobileMenuId.set(null)"
+                    >
+                      <i class="bi bi-currency-dollar me-2"></i> Продати
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      class="dropdown-item"
+                      (click)="openProductModal(prod); activeMobileMenuId.set(null)"
+                    >
+                      <i class="bi bi-pencil me-2"></i> Редагувати
+                    </button>
+                  </li>
+                  <li><hr class="dropdown-divider" /></li>
+                  <li>
+                    <button
+                      class="dropdown-item text-danger"
+                      (click)="confirmDelete(prod); activeMobileMenuId.set(null)"
+                    >
+                      <i class="bi bi-trash me-2"></i> Видалити
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="row g-2 pt-2 border-top text-secondary small" style="font-size: 0.85rem">
+              <div class="col-12 mb-1">
+                <strong>Тварина:</strong>
+                <a
+                  [routerLink]="['/animals', prod.animalId]"
+                  class="text-success text-decoration-none fw-semibold ms-1"
+                >
+                  {{ prod.animalName || 'Тварина #' + prod.animalId }}
+                </a>
+              </div>
+              <div class="col-6" [class.text-danger]="prod.quantity === 0">
+                <strong>Залишок:</strong> {{ prod.quantity }} {{ getUnitLabel(prod.unit) }}
+              </div>
+              <div class="col-6">
+                <strong>Використано:</strong> {{ prod.usedQuantity }} {{ getUnitLabel(prod.unit) }}
+              </div>
+              <div class="col-6">
+                <strong>Дата:</strong> {{ prod.producedAt | date: 'yyyy-MM-dd' }}
+              </div>
+              <div class="col-12 text-truncate" *ngIf="prod.description">
+                <strong>Опис:</strong> {{ prod.description }}
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Pagination -->
+        <app-pagination
+          [pageNumber]="pageNumber()"
+          [totalPages]="totalPages()"
+          [totalCount]="totalCount()"
+          (pageChange)="changePage($event)"
+        />
+      </div>
+    </ng-template>
+
+    <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+    <div
+      class="offcanvas offcanvas-end shadow-sm"
+      [class.show]="showFilters()"
+      tabindex="-1"
+      style="z-index: 1045"
+    >
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+        <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+      </div>
+      <div class="offcanvas-body p-4">
+        <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+          <!-- Location (Animal) -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Фільтр за твариною</label
+            >
+            <div class="dropdown">
+              <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                style="border-color: #dee2e6"
+              >
+                <span class="text-truncate">{{
+                  getSelectedAnimalNameForFilter() || '-- Всі тварини --'
+                }}</span>
+              </button>
+              <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto">
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0)"
+                    (click)="filterForm.patchValue({ AnimalId: null })"
+                  >
+                    <span class="text-muted">-- Всі тварини --</span>
+                  </a>
+                </li>
+                <li *ngIf="allAnimals().length > 0"><hr class="dropdown-divider" /></li>
+                <li *ngFor="let animal of allAnimals()">
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0)"
+                    (click)="filterForm.patchValue({ AnimalId: animal.id })"
+                    [class.active]="filterForm.get('AnimalId')?.value === animal.id"
+                  >
+                    {{ animal.name }}
+                    <span class="text-muted small ms-1" *ngIf="animal.tagNumber"
+                      >#{{ animal.tagNumber }}</span
+                    >
+                  </a>
+                </li>
+                <li *ngIf="hasMoreAnimals()">
+                  <hr class="dropdown-divider" />
+                  <div class="px-2 py-1">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center"
+                      (click)="loadMoreAnimals(); $event.stopPropagation()"
+                      [disabled]="loadingMoreAnimals()"
+                    >
+                      <span
+                        *ngIf="loadingMoreAnimals()"
+                        class="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
+                      Завантажити ще 10...
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Unit -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Одиниця</label
+            >
+            <select class="form-select" formControlName="Unit">
+              <option [ngValue]="null">Всі одиниці</option>
+              <option *ngFor="let u of unitOptions" [value]="u.value">{{ u.label }}</option>
+            </select>
+          </div>
+
+          <!-- Date Range -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Дата виробництва від</label
+            >
+            <input type="date" class="form-control" formControlName="DateFrom" />
+          </div>
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Дата виробництва до</label
+            >
+            <input type="date" class="form-control" formControlName="DateTo" />
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Filter Backdrop -->
+    <div
+      class="offcanvas-backdrop fade show"
+      *ngIf="showFilters()"
+      (click)="toggleFilters()"
+      style="z-index: 1040"
+    ></div>
+  </main>
+
+  <!-- Create/Edit Product Modal -->
+  <div
+    *ngIf="isProductModalOpen()"
+    class="modal fade show d-block"
+    tabindex="-1"
+    style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-bottom">
+          <h5 class="modal-title fw-bold">
+            {{ editingProduct() ? 'Редагувати продукцію' : 'Зареєструвати продукцію' }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            (click)="closeProductModal()"
+            [disabled]="submittingProduct()"
+          ></button>
+        </div>
+        <form [formGroup]="productForm" (ngSubmit)="onSubmitProduct()">
+          <div class="modal-body py-4">
+            <!-- Target Animal Select (Only for Create) -->
+            <div class="mb-3" *ngIf="!editingProduct()">
+              <label for="animalId" class="form-label fw-semibold"
+                >Виберіть тварину <span class="text-danger">*</span></label
+              >
+              <div
+                class="dropdown"
+                [class.is-invalid]="
+                  productForm.get('animalId')?.touched && productForm.get('animalId')?.invalid
+                "
+              >
+                <button
+                  class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false"
+                  style="border-color: #dee2e6"
+                  [class.border-danger]="
+                    productForm.get('animalId')?.touched && productForm.get('animalId')?.invalid
+                  "
+                >
+                  <span class="text-truncate">{{
+                    getSelectedAnimalNameForProductForm() || 'Оберіть тварину...'
+                  }}</span>
+                </button>
+                <ul
+                  class="dropdown-menu w-100 shadow-sm"
+                  style="max-height: 250px; overflow-y: auto"
+                >
+                  <li>
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      (click)="productForm.patchValue({ animalId: null })"
+                    >
+                      <span class="text-muted">Оберіть тварину...</span>
+                    </a>
+                  </li>
+                  <li *ngIf="allAnimals().length > 0"><hr class="dropdown-divider" /></li>
+                  <li *ngFor="let animal of allAnimals()">
+                    <a
+                      class="dropdown-item"
+                      href="javascript:void(0)"
+                      (click)="productForm.patchValue({ animalId: animal.id })"
+                      [class.active]="productForm.get('animalId')?.value === animal.id"
+                    >
+                      {{ animal.name }}
+                      <span class="text-muted small ms-1" *ngIf="animal.tagNumber"
+                        >#{{ animal.tagNumber }}</span
+                      >
+                    </a>
+                  </li>
+                  <li *ngIf="hasMoreAnimals()">
+                    <hr class="dropdown-divider" />
+                    <div class="px-2 py-1">
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center"
+                        (click)="loadMoreAnimals(); $event.stopPropagation()"
+                        [disabled]="loadingMoreAnimals()"
+                      >
+                        <span
+                          *ngIf="loadingMoreAnimals()"
+                          class="spinner-border spinner-border-sm me-2"
+                          role="status"
+                        ></span>
+                        Завантажити ще 10...
+                      </button>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+              <div
+                class="invalid-feedback"
+                *ngIf="productForm.get('animalId')?.touched && productForm.get('animalId')?.invalid"
+              >
+                Виберіть тварину.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="prodName" class="form-label fw-semibold"
+                >Назва продукту <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                id="prodName"
+                class="form-control"
+                formControlName="name"
+                placeholder="Наприклад: Молоко коров'яче, Вовна"
+                [class.is-invalid]="
+                  productForm.get('name')?.touched && productForm.get('name')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Назва є обов'язковою.</div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-6">
+                <label for="prodQty" class="form-label fw-semibold"
+                  >Кількість <span class="text-danger">*</span></label
+                >
+                <input
+                  type="number"
+                  id="prodQty"
+                  class="form-control"
+                  formControlName="quantity"
+                  min="0.001"
+                  step="any"
+                  [class.is-invalid]="
+                    productForm.get('quantity')?.touched && productForm.get('quantity')?.invalid
+                  "
+                />
+                <div class="invalid-feedback">Кількість має бути більше нуля.</div>
+              </div>
+              <div class="col-6">
+                <label for="prodUnit" class="form-label fw-semibold"
+                  >Одиниця <span class="text-danger">*</span></label
+                >
+                <select id="prodUnit" class="form-select" formControlName="unit">
+                  <option *ngFor="let u of unitOptions" [value]="u.value">{{ u.label }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3" *ngIf="editingProduct()">
+              <div class="col-12">
+                <label for="prodUsedQty" class="form-label fw-semibold text-warning"
+                  >Використана кількість</label
+                >
+                <input
+                  type="number"
+                  id="prodUsedQty"
+                  class="form-control border-warning"
+                  formControlName="usedQuantity"
+                  min="0"
+                  step="any"
+                  [class.is-invalid]="
+                    productForm.get('usedQuantity')?.touched &&
+                    productForm.get('usedQuantity')?.invalid
+                  "
+                />
+                <div class="form-text text-muted" style="font-size: 0.8rem">
+                  Вкажіть абсолютне значення використаної кількості (скільки всього вже було
+                  використано). Відповідно до цього значення буде перераховано залишок.
+                </div>
+                <div class="invalid-feedback">Кількість не може бути від'ємною.</div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="prodDate" class="form-label fw-semibold"
+                >Дата збору <span class="text-danger">*</span></label
+              >
+              <input
+                type="date"
+                id="prodDate"
+                class="form-control"
+                formControlName="producedAt"
+                [class.is-invalid]="
+                  productForm.get('producedAt')?.touched && productForm.get('producedAt')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Дата є обов'язковою.</div>
+            </div>
+
+            <div class="mb-0">
+              <label for="prodDesc" class="form-label fw-semibold">Опис / Нотатки</label>
+              <textarea
+                id="prodDesc"
+                class="form-control"
+                formControlName="description"
+                rows="3"
+                placeholder="Опис процесу або якості..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer border-top">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="closeProductModal()"
+              [disabled]="submittingProduct()"
+            >
+              Скасувати
+            </button>
+            <button
+              type="submit"
+              class="btn btn-primary-custom d-flex align-items-center gap-2"
+              [disabled]="productForm.invalid || submittingProduct()"
+            >
+              <span
+                *ngIf="submittingProduct()"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Зберегти
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sell Product Modal -->
+  <div
+    *ngIf="isSellModalOpen()"
+    class="modal fade show d-block"
+    tabindex="-1"
+    style="background: rgba(34, 48, 37, 0.45); backdrop-filter: blur(4px); z-index: 1060"
+  >
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-bottom bg-success text-white">
+          <h5 class="modal-title fw-bold">Продати продукцію</h5>
+          <button
+            type="button"
+            class="btn-close btn-close-white"
+            (click)="closeSellModal()"
+            [disabled]="submittingSell()"
+          ></button>
+        </div>
+        <form [formGroup]="sellForm" (ngSubmit)="onSubmitSell()">
+          <div class="modal-body py-4">
+            <div class="alert alert-info border-0 py-2" style="font-size: 0.9rem">
+              <strong>Продукт:</strong> {{ sellProductContext()?.name }} <br />
+              <strong>В наявності на складі:</strong> {{ sellProductContext()?.quantity }}
+              {{ getUnitLabel(sellProductContext()?.unit!) }}
+            </div>
+
+            <div class="mb-3">
+              <label for="sellQty" class="form-label fw-semibold"
+                >Кількість для продажу <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                id="sellQty"
+                class="form-control"
+                formControlName="quantity"
+                min="0.001"
+                step="any"
+                [class.is-invalid]="
+                  sellForm.get('quantity')?.touched && sellForm.get('quantity')?.invalid
+                "
+              />
+              <div class="invalid-feedback">
+                Введіть коректну кількість. Максимально доступно:
+                {{ sellProductContext()?.quantity }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="sellPrice" class="form-label fw-semibold"
+                >Ціна за одиницю (₴) <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                id="sellPrice"
+                class="form-control"
+                formControlName="unitPrice"
+                min="0.01"
+                step="any"
+                [class.is-invalid]="
+                  sellForm.get('unitPrice')?.touched && sellForm.get('unitPrice')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Ціна повинна бути більше нуля.</div>
+            </div>
+
+            <div class="mb-3">
+              <label for="sellDate" class="form-label fw-semibold"
+                >Дата продажу <span class="text-danger">*</span></label
+              >
+              <input
+                type="date"
+                id="sellDate"
+                class="form-control"
+                formControlName="soldAt"
+                [class.is-invalid]="
+                  sellForm.get('soldAt')?.touched && sellForm.get('soldAt')?.invalid
+                "
+              />
+              <div class="invalid-feedback">Введіть дату продажу.</div>
+            </div>
+
+            <div class="mb-0">
+              <label for="sellDesc" class="form-label fw-semibold">Опис продажу</label>
+              <textarea
+                id="sellDesc"
+                class="form-control"
+                formControlName="description"
+                rows="2"
+                placeholder="Запис про покупця або деталі угоди..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer border-top">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              (click)="closeSellModal()"
+              [disabled]="submittingSell()"
+            >
+              Скасувати
+            </button>
+            <button
+              type="submit"
+              class="btn btn-success d-flex align-items-center gap-2"
+              [disabled]="sellForm.invalid || submittingSell()"
+            >
+              <span
+                *ngIf="submittingSell()"
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+              Продати
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Видалити запис продукції"
+    [message]="
+      'Ви дійсно бажаєте видалити запис продукції <strong>' +
+      (productToDelete()?.name || '') +
+      '</strong>?'
+    "
+    confirmLabel="Видалити"
+    [submitting]="submittingDelete()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+</div>

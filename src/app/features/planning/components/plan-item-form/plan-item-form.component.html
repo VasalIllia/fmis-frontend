@@ -1,0 +1,145 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ itemId ? 'Редагувати завдання' : 'Створити нове завдання' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <form [formGroup]="planForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Title -->
+        <div>
+          <label for="title" class="form-label fw-semibold">Назва завдання <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            id="title"
+            class="form-control"
+            formControlName="title"
+            placeholder="Наприклад: Вакцинація поголів'я, Очищення секцій"
+            [class.is-invalid]="planForm.get('title')?.touched && planForm.get('title')?.invalid"
+          />
+          <div class="invalid-feedback">Назва є обов'язковою.</div>
+        </div>
+
+        <!-- Status and Priority -->
+        <div class="row">
+          <div class="col-6">
+            <label for="status" class="form-label fw-semibold">Статус виконання <span class="text-danger">*</span></label>
+            <select id="status" class="form-select" formControlName="status">
+              <option value="Planned">Заплановано</option>
+              <option value="InProgress">В процесі</option>
+              <option value="Done">Виконано</option>
+              <option value="Cancelled">Скасовано</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label for="priority" class="form-label fw-semibold">Пріоритет <span class="text-danger">*</span></label>
+            <select id="priority" class="form-select" formControlName="priority">
+              <option value="Low">Низький</option>
+              <option value="Normal">Звичайний</option>
+              <option value="High">Високий</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- StartsAt & EndsAt Dates -->
+        <div class="row">
+          <div class="col-6">
+            <label for="startsAt" class="form-label fw-semibold">Час початку <span class="text-danger">*</span></label>
+            <input
+              type="datetime-local"
+              id="startsAt"
+              class="form-control"
+              formControlName="startsAt"
+              [class.is-invalid]="planForm.get('startsAt')?.touched && planForm.get('startsAt')?.invalid"
+            />
+            <div class="invalid-feedback">Початок є обов'язковим.</div>
+          </div>
+          <div class="col-6">
+            <label for="endsAt" class="form-label fw-semibold">Час завершення</label>
+            <input
+              type="datetime-local"
+              id="endsAt"
+              class="form-control"
+              formControlName="endsAt"
+              [class.is-invalid]="planForm.get('endsAt')?.touched && planForm.get('endsAt')?.invalid"
+            />
+            <div class="invalid-feedback">
+              Кінець події не може бути раніше початку.
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Детальний опис завдання</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Що саме потрібно зробити, призначені працівники, деталі..."
+          ></textarea>
+        </div>
+
+        <!-- Email Notification Section -->
+        <section class="border-top pt-3 mt-2">
+          <div class="form-check mb-2">
+            <input type="checkbox" id="notificationsEnabled" class="form-check-input" formControlName="notificationsEnabled" />
+            <label for="notificationsEnabled" class="form-check-label fw-bold text-success">
+              Надіслати сповіщення на Email
+            </label>
+          </div>
+
+          <div *ngIf="planForm.get('notificationsEnabled')?.value" class="bg-light p-3 rounded mt-2">
+            <label for="notifyAt" class="form-label fw-semibold" style="font-size: 0.85rem;">Час надсилання сповіщення <span class="text-danger">*</span></label>
+            <input
+              type="datetime-local"
+              id="notifyAt"
+              class="form-control form-control-sm"
+              formControlName="notifyAt"
+              [class.is-invalid]="planForm.get('notifyAt')?.touched && planForm.get('notifyAt')?.invalid"
+            />
+            <div class="invalid-feedback">Час сповіщення обов'язковий та має бути раніше початку завдання.</div>
+          </div>
+        </section>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="planForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>

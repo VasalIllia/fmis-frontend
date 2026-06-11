@@ -1,0 +1,120 @@
+<header class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a routerLink="/crops" class="text-decoration-none text-success">Поля та посіви</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Локації</li>
+      </ol>
+    </nav>
+    <h2 class="fw-bold text-dark mb-0">Локації для посівів (Поля)</h2>
+  </div>
+  <button class="btn btn-primary" (click)="openCreateModal()">
+    <i class="bi bi-plus-lg me-1"></i> Додати локацію
+  </button>
+</header>
+
+<main class="card card-custom mt-4">
+  <div class="card-body">
+    <header class="d-flex flex-column flex-md-row justify-content-between mb-4">
+      <div class="search-box position-relative mb-3 mb-md-0" style="max-width: 300px;">
+        <i class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"></i>
+        <input type="text" class="form-control ps-5" placeholder="Пошук локацій..."
+          (input)="onSearch($event)">
+      </div>
+    </header>
+
+    <section *ngIf="loading()" class="py-5">
+      <app-loading-spinner></app-loading-spinner>
+    </section>
+
+    <ng-container *ngIf="!loading()">
+      <section class="table-responsive" *ngIf="locations().length > 0; else emptyState">
+        <table class="table table-hover align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Назва</th>
+              <th>Опис</th>
+              <th class="text-end">Дії</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let loc of locations()">
+              <td>#{{ loc.id }}</td>
+              <td><strong>{{ loc.name }}</strong></td>
+              <td><span class="text-muted text-truncate d-inline-block" style="max-width: 300px;">{{ loc.description || '—' }}</span></td>
+              <td class="text-end">
+                <button class="btn btn-sm btn-outline-primary me-2" (click)="openEditModal(loc)" title="Редагувати">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(loc)" title="Видалити">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <app-pagination
+          [pageNumber]="pageNumber()"
+          [totalPages]="totalPages()"
+          [totalCount]="totalCount()"
+          (pageChange)="changePage($event)"
+        ></app-pagination>
+      </section>
+    </ng-container>
+
+    <ng-template #emptyState>
+      <app-empty-state
+        icon="bi-geo-alt"
+        [title]="'Локації відсутні'"
+        [message]="'У вас ще немає доданих локацій (полів) для посівів. Натисніть кнопку вище, щоб додати першу локацію.'"
+        [actionLabel]="'Додати локацію'"
+        (action)="openCreateModal()"
+      ></app-empty-state>
+    </ng-template>
+  </div>
+</main>
+
+<app-confirm-modal
+  [isOpen]="isDeleteConfirmOpen()"
+  title="Видалення локації"
+  [message]="'Ви дійсно бажаєте видалити локацію \'' + (locationToDelete()?.name || '') + '\'?'"
+  [submitting]="submitting()"
+  (confirm)="onDelete()"
+  (cancel)="closeDeleteConfirm()"
+></app-confirm-modal>
+
+<div class="modal-backdrop fade show" *ngIf="isModalOpen()"></div>
+<div class="modal fade show d-block" tabindex="-1" *ngIf="isModalOpen()">
+  <div class="modal-dialog modal-dialog-centered">
+    <article class="modal-content">
+      <header class="modal-header">
+        <h5 class="modal-title">{{ editingLocationId() ? 'Редагувати' : 'Нова' }} локація</h5>
+        <button type="button" class="btn-close" (click)="closeModal()" [disabled]="submitting()"></button>
+      </header>
+      <div class="modal-body">
+        <form [formGroup]="locationForm" (ngSubmit)="onSubmit()">
+          <fieldset class="mb-3">
+            <label class="form-label">Назва локації <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" formControlName="name" placeholder="Наприклад: Поле 1">
+            <div *ngIf="locationForm.get('name')?.invalid && locationForm.get('name')?.touched" class="text-danger small mt-1">
+              Назва є обов'язковою (макс 100 символів)
+            </div>
+          </fieldset>
+          <fieldset class="mb-3">
+            <label class="form-label">Опис</label>
+            <textarea class="form-control" formControlName="description" rows="3" placeholder="Додаткова інформація..."></textarea>
+          </fieldset>
+          <footer class="d-flex justify-content-end mt-4">
+            <button type="button" class="btn btn-light me-2" (click)="closeModal()" [disabled]="submitting()">Скасувати</button>
+            <button type="submit" class="btn btn-primary" [disabled]="locationForm.invalid || submitting()">
+              <span *ngIf="submitting()" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              Зберегти
+            </button>
+          </footer>
+        </form>
+      </div>
+    </article>
+  </div>
+</div>

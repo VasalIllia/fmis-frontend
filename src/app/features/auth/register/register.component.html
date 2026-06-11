@@ -1,0 +1,50 @@
+<div class="w-100">
+  <div *ngIf="errorMessage()" class="alert alert-danger p-3 mb-3 small">
+    {{ errorMessage() }}
+  </div>
+
+  <div *ngIf="isSuccess()" class="alert alert-success p-3 mb-3 text-center">
+    <p class="mb-3">Реєстрація успішна! Перевірте ваш email для підтвердження акаунту.</p>
+    <button class="btn btn-outline-success w-100" (click)="resendEmail()" [disabled]="isResending()">
+      <span class="spinner-border spinner-border-sm me-1" *ngIf="isResending()"></span>
+      <span *ngIf="!isResending()">Надіслати лист повторно</span>
+    </button>
+  </div>
+
+  <form *ngIf="!isSuccess()" [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3">
+    <div>
+      <label class="form-label text-muted small mb-1">Email</label>
+      <input class="form-control" type="email" formControlName="email" placeholder="example@mail.com" />
+      <div class="text-danger small mt-1" *ngIf="registerForm.controls['email'].hasError('required') && registerForm.controls['email'].touched">Email обов'язковий</div>
+      <div class="text-danger small mt-1" *ngIf="registerForm.controls['email'].hasError('email') && registerForm.controls['email'].touched">Невірний формат</div>
+    </div>
+
+    <div>
+      <label class="form-label text-muted small mb-1">Пароль</label>
+      <div class="input-group">
+        <input class="form-control" [type]="hidePassword() ? 'password' : 'text'" formControlName="password" />
+        <button class="btn btn-outline-secondary" type="button" (click)="hidePassword.set(!hidePassword())">
+          <i class="bi" [ngClass]="hidePassword() ? 'bi-eye-slash' : 'bi-eye'"></i>
+        </button>
+      </div>
+      <div class="text-danger small mt-1" *ngIf="registerForm.controls['password'].hasError('required') && registerForm.controls['password'].touched">Пароль обов'язковий</div>
+      <div class="text-danger small mt-1" *ngIf="registerForm.controls['password'].hasError('minlength') && registerForm.controls['password'].touched">Мінімум 6 символів</div>
+    </div>
+
+    <div>
+      <label class="form-label text-muted small mb-1">Підтвердження пароля</label>
+      <div class="input-group">
+        <input class="form-control" [type]="hideConfirmPassword() ? 'password' : 'text'" formControlName="confirmPassword" />
+        <button class="btn btn-outline-secondary" type="button" (click)="hideConfirmPassword.set(!hideConfirmPassword())">
+          <i class="bi" [ngClass]="hideConfirmPassword() ? 'bi-eye-slash' : 'bi-eye'"></i>
+        </button>
+      </div>
+      <div class="text-danger small mt-1" *ngIf="registerForm.hasError('mismatch') && registerForm.controls['confirmPassword'].touched">Паролі не співпадають</div>
+    </div>
+
+    <button class="btn btn-primary w-100" type="submit" [disabled]="registerForm.invalid || isLoading()">
+      <span class="spinner-border spinner-border-sm me-1" *ngIf="isLoading()"></span>
+      <span *ngIf="!isLoading()">Зареєструватися</span>
+    </button>
+  </form>
+</div>

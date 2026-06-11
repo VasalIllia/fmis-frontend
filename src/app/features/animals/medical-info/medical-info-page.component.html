@@ -1,0 +1,254 @@
+<div class="container-fluid p-0">
+  <!-- Breadcrumbs and Header -->
+  <div
+    class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4"
+  >
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item">
+            <a routerLink="/animals" class="text-decoration-none text-success">Тварини</a>
+          </li>
+          <li class="breadcrumb-item active" aria-current="page">Медичні записи</li>
+        </ol>
+      </nav>
+      <h2 class="fw-bold text-dark mb-0">Ветеринарний журнал ферми</h2>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+      <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+        <i
+          class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+        ></i>
+        <input
+          type="text"
+          class="form-control ps-5"
+          placeholder="Пошук за назвою..."
+          [value]="filterForm.get('Search')?.value || ''"
+          (input)="onSearchInputChange($event)"
+        />
+      </div>
+      <button
+        class="btn btn-outline-secondary d-flex align-items-center gap-2"
+        (click)="toggleFilters()"
+      >
+        <i class="bi bi-funnel"></i> Фільтри
+      </button>
+      <button
+        class="btn btn-primary-custom d-flex align-items-center gap-2"
+        (click)="openMedicalModal()"
+      >
+        <i class="bi bi-plus-lg"></i> Додати медичний запис
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main>
+    <div *ngIf="loading(); else contentTpl" class="text-center py-5 bg-white border rounded-3">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #contentTpl>
+      <!-- Empty State -->
+      <app-empty-state
+        *ngIf="medicalRecords().length === 0"
+        icon="bi-heart-pulse"
+        title="Записів не знайдено"
+        message="У ветеринарному журналі ферми ще немає жодного запису для тварин."
+        actionLabel="Додати перший запис"
+        (action)="openMedicalModal()"
+      />
+
+      <!-- Medical Records List -->
+      <div *ngIf="medicalRecords().length > 0" class="card-custom p-0 overflow-hidden">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th class="ps-4">Процедура / Діагноз</th>
+                <th>Тварина</th>
+                <th>Дата проведення</th>
+                <th>Опис та призначення</th>
+                <th class="text-end pe-4">Дії</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let record of medicalRecords()">
+                <td class="ps-4 fw-semibold text-dark">{{ record.title }}</td>
+                <td>
+                  <a
+                    [routerLink]="['/animals', record.animalId]"
+                    class="text-success text-decoration-none fw-semibold"
+                  >
+                    {{ record.animalName || 'Тварина #' + record.animalId }}
+                  </a>
+                </td>
+                <td>{{ record.procedureDate | date: 'yyyy-MM-dd' }}</td>
+                <td class="text-secondary whitespace-pre-wrap">{{ record.description || '—' }}</td>
+                <td class="text-end pe-4">
+                  <div class="d-inline-flex gap-2">
+                    <button
+                      class="btn btn-sm btn-outline-primary"
+                      (click)="openMedicalModal(record)"
+                      title="Редагувати"
+                    >
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="confirmDelete(record)"
+                      title="Видалити"
+                    >
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+    <div
+      class="offcanvas offcanvas-end shadow-sm"
+      [class.show]="showFilters()"
+      tabindex="-1"
+      style="z-index: 1045"
+    >
+      <div class="offcanvas-header border-bottom">
+        <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+        <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+      </div>
+      <div class="offcanvas-body p-4">
+        <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+          <!-- Location (Animal) -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Фільтр за твариною</label
+            >
+            <div class="dropdown">
+              <button
+                class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                style="border-color: #dee2e6"
+              >
+                <span class="text-truncate">{{
+                  getSelectedAnimalName() || '-- Всі тварини --'
+                }}</span>
+              </button>
+              <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto">
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0)"
+                    (click)="filterForm.patchValue({ AnimalId: null })"
+                  >
+                    <span class="text-muted">-- Всі тварини --</span>
+                  </a>
+                </li>
+                <li *ngIf="allAnimals().length > 0"><hr class="dropdown-divider" /></li>
+                <li *ngFor="let animal of allAnimals()">
+                  <a
+                    class="dropdown-item"
+                    href="javascript:void(0)"
+                    (click)="filterForm.patchValue({ AnimalId: animal.id })"
+                    [class.active]="filterForm.get('AnimalId')?.value === animal.id"
+                  >
+                    {{ animal.name }}
+                    <span class="text-muted small ms-1" *ngIf="animal.tagNumber"
+                      >#{{ animal.tagNumber }}</span
+                    >
+                  </a>
+                </li>
+                <li *ngIf="hasMoreAnimals()">
+                  <hr class="dropdown-divider" />
+                  <div class="px-2 py-1">
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center"
+                      (click)="loadMoreAnimals(); $event.stopPropagation()"
+                      [disabled]="loadingMoreAnimals()"
+                    >
+                      <span
+                        *ngIf="loadingMoreAnimals()"
+                        class="spinner-border spinner-border-sm me-2"
+                        role="status"
+                      ></span>
+                      Завантажити ще 10...
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Species -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Вид тварини</label
+            >
+            <select class="form-select" formControlName="AnimalSpecies">
+              <option [ngValue]="null">Всі види</option>
+              <option *ngFor="let species of speciesOptions" [value]="species.value">
+                {{ species.label }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Date Range -->
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Дата процедури від</label
+            >
+            <input type="date" class="form-control" formControlName="DateFrom" />
+          </div>
+          <div>
+            <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+              >Дата процедури до</label
+            >
+            <input type="date" class="form-control" formControlName="DateTo" />
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Filter Backdrop -->
+    <div
+      class="offcanvas-backdrop fade show"
+      *ngIf="showFilters()"
+      (click)="toggleFilters()"
+      style="z-index: 1040"
+    ></div>
+  </main>
+
+  <!-- Drawers / Modals -->
+
+  <!-- Form Drawer -->
+  <app-medical-info-form
+    *ngIf="isMedicalModalOpen()"
+    [medicalInfoId]="editingMedicalInfoId()"
+    (close)="closeMedicalModal()"
+    (saved)="onMedicalSaved()"
+  ></app-medical-info-form>
+
+  <!-- Delete Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Вилучити ветеринарний запис"
+    [message]="
+      'Ви дійсно бажаєте видалити ветеринарний запис <strong>' +
+      (recordToDelete()?.title || '') +
+      '</strong>?'
+    "
+    confirmLabel="Видалити"
+    [submitting]="submittingDelete()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+</div>

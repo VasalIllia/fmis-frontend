@@ -1,0 +1,105 @@
+<div class="container-fluid p-0">
+  <!-- Breadcrumbs and Header -->
+  <div>
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-1">
+        <li class="breadcrumb-item"><a routerLink="/planning" class="text-decoration-none text-success">Планувальник</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Повідомлення</li>
+      </ol>
+    </nav>
+    <app-page-header title="Системні сповіщення">
+      <!-- Note about automatic cleanup -->
+      <span class="text-secondary small d-flex align-items-center gap-1">
+        <i class="bi bi-info-circle"></i> Повідомлення зберігаються протягом 1 дня
+      </span>
+    </app-page-header>
+  </div>
+
+  <!-- Filters Panel -->
+  <section class="card-custom mb-4 py-3" aria-label="Фільтри">
+    <div class="d-flex gap-2">
+      <button
+        class="btn btn-sm"
+        [class.btn-success]="filterStatus() === null"
+        [class.btn-outline-secondary]="filterStatus() !== null"
+        (click)="setFilter(null)"
+      >
+        Всі сповіщення
+      </button>
+      <button
+        class="btn btn-sm"
+        [class.btn-success]="filterStatus() === 'Unread'"
+        [class.btn-outline-secondary]="filterStatus() !== 'Unread'"
+        (click)="setFilter('Unread')"
+      >
+        Тільки непрочитані
+      </button>
+    </div>
+  </section>
+
+  <!-- Loading State -->
+  <app-loading-spinner *ngIf="loading(); else contentTpl" />
+
+  <ng-template #contentTpl>
+    <!-- Empty State -->
+    <app-empty-state
+      *ngIf="notifications().length === 0"
+      icon="bi-bell-slash"
+      title="Немає сповіщень"
+      message="Нових або архівних сповіщень системи наразі немає."
+    />
+
+    <!-- Notifications List -->
+    <div *ngIf="notifications().length > 0" class="d-flex flex-column gap-3">
+      <article
+        *ngFor="let note of notifications()"
+        class="card-custom p-3 border-start border-4 shadow-sm"
+        [class.border-success]="note.status === 'Unread'"
+        [class.border-secondary]="note.status === 'Read'"
+        [class.bg-light]="note.status === 'Read'"
+      >
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap flex-md-nowrap">
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+              <span class="badge" [class.bg-success]="note.status === 'Unread'" [class.bg-secondary]="note.status === 'Read'">
+                {{ note.status === 'Unread' ? 'Нове' : 'Прочитано' }}
+              </span>
+              <span class="badge bg-light text-dark border">
+                Модуль: {{ getSourceLabel(note.sourceType) }}
+              </span>
+              <time class="text-secondary small">{{ note.notifyAt | date:'yyyy-MM-dd HH:mm' }}</time>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">{{ note.planItemTitle || 'Завдання' }}</h5>
+            <p class="text-secondary mb-0 whitespace-pre-wrap">{{ note.planItemDescription || 'Нагадування про заплановану роботу.' }}</p>
+            <div class="mt-2 text-success small" *ngIf="note.planStartsAt">
+              <i class="bi bi-clock-history"></i> Початок завдання: <strong><time>{{ note.planStartsAt | date:'yyyy-MM-dd HH:mm' }}</time></strong>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="d-flex gap-2 align-self-md-center ms-auto">
+            <button
+              *ngIf="note.status === 'Unread'"
+              class="btn btn-sm btn-outline-success d-flex align-items-center gap-1"
+              (click)="markRead(note)"
+              [disabled]="submittingId() === note.id"
+            >
+              <i class="bi bi-check-lg"></i> Прочитано
+            </button>
+            <a [routerLink]="['/planning']" class="btn btn-sm btn-outline-secondary">
+              В планинувальник
+            </a>
+          </div>
+        </div>
+      </article>
+
+      <!-- Pagination -->
+      <app-pagination
+        [pageNumber]="pageNumber()"
+        [totalPages]="totalPages()"
+        [totalCount]="totalCount()"
+        (pageChange)="changePage($event)"
+      />
+    </div>
+  </ng-template>
+</div>

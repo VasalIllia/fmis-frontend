@@ -1,0 +1,129 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ recordId ? 'Редагувати транзакцію' : 'Додати транзакцію вручну' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <form [formGroup]="financeForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Kind selection -->
+        <div>
+          <label class="form-label fw-semibold">Тип операції <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2">
+            <button
+              type="button"
+              class="btn flex-grow-1"
+              [class.btn-success]="financeForm.get('kind')?.value === 'Income'"
+              [class.btn-outline-secondary]="financeForm.get('kind')?.value !== 'Income'"
+              (click)="setKind('Income')"
+            >
+              <i class="bi bi-graph-up-arrow"></i> Дохід (Income)
+            </button>
+            <button
+              type="button"
+              class="btn flex-grow-1"
+              [class.btn-danger]="financeForm.get('kind')?.value === 'Expense'"
+              [class.btn-outline-secondary]="financeForm.get('kind')?.value !== 'Expense'"
+              (click)="setKind('Expense')"
+            >
+              <i class="bi bi-graph-down-arrow"></i> Витрата (Expense)
+            </button>
+          </div>
+        </div>
+
+        <!-- Amount -->
+        <div>
+          <label for="amount" class="form-label fw-semibold">Сума (₴) <span class="text-danger">*</span></label>
+          <input
+            type="number"
+            id="amount"
+            class="form-control"
+            formControlName="amount"
+            min="0.01"
+            step="any"
+            [class.is-invalid]="financeForm.get('amount')?.touched && financeForm.get('amount')?.invalid"
+          />
+          <div class="invalid-feedback">Введіть суму більше нуля.</div>
+        </div>
+
+        <!-- Type -->
+        <div>
+          <label for="type" class="form-label fw-semibold">Категорія транзакції <span class="text-danger">*</span></label>
+          <select id="type" class="form-select" formControlName="type">
+            <option *ngFor="let opt of filteredTypeOptions()" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <!-- Module Type -->
+        <div>
+          <label for="moduleType" class="form-label fw-semibold">Сільськогосподарський модуль <span class="text-danger">*</span></label>
+          <select id="moduleType" class="form-select" formControlName="moduleType">
+            <option *ngFor="let opt of moduleOptions" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <!-- Occurred At Date -->
+        <div>
+          <label for="occurredAt" class="form-label fw-semibold">Дата проведення <span class="text-danger">*</span></label>
+          <input
+            type="date"
+            id="occurredAt"
+            class="form-control"
+            formControlName="occurredAt"
+            [class.is-invalid]="financeForm.get('occurredAt')?.touched && financeForm.get('occurredAt')?.invalid"
+          />
+          <div class="invalid-feedback">Дата є обов'язковою.</div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Коментар / Примітки</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="4"
+            placeholder="Введіть контрагента, деталі платежу тощо..."
+          ></textarea>
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="financeForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>

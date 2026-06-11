@@ -1,1 +1,384 @@
-/* You can add global styles to this file, and also import other style files */
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+
+/* Bootstrap 5.3 CSS */
+@import url('https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css');
+
+/* Bootstrap Icons */
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css');
+
+:root {
+  /* Modern Nature/Farm Palette */
+  --color-bg-main: #F3F2EB;
+  --color-primary: #6FAF72;
+  --color-primary-dark: #538f55;
+  --color-primary-light: #e1f0e2;
+
+  /* Bootstrap Variable Overrides */
+  --bs-primary: #6FAF72;
+  --bs-primary-rgb: 111, 175, 114;
+  --bs-primary-text-emphasis: #2b462d;
+  --bs-primary-bg-subtle: #e1f0e2;
+  --bs-primary-border-subtle: #b7d7b8;
+  --bs-offcanvas-bg: #FFFFFF;
+  --color-text-main: #223025;
+  --color-text-secondary: #6C7A70;
+  /* Aliases for backward compatibility */
+  --color-background: #F3F2EB;
+  --color-secondary: #6C7A70;
+  --color-border: #DDE8DE;
+  --color-card-bg: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-card-alt: #F2F7F1;
+  --color-danger: #C65A5A;
+  --color-warning: #D6A94A;
+  --font-family-main: 'Inter', 'Roboto', 'Helvetica Neue', sans-serif;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Custom Buttons */
+
+/*
+ * Override Bootstrap 5.3's compiled .btn-primary component variables.
+ * Bootstrap CDN ships pre-compiled CSS with hardcoded --bs-btn-* vars set to blue (#0d6efd).
+ * Overriding them here ensures any .btn.btn-primary class also renders in our primary green.
+ */
+.btn-primary {
+  --bs-btn-bg: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary-dark);
+  --bs-btn-hover-border-color: var(--color-primary-dark);
+  --bs-btn-active-bg: var(--color-primary-dark);
+  --bs-btn-active-border-color: var(--color-primary-dark);
+  --bs-btn-disabled-bg: var(--color-primary);
+  --bs-btn-disabled-border-color: var(--color-primary);
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--color-primary);
+  --bs-btn-border-color: var(--color-primary);
+  --bs-btn-hover-bg: var(--color-primary);
+  --bs-btn-hover-border-color: var(--color-primary);
+  --bs-btn-active-bg: var(--color-primary);
+  --bs-btn-active-border-color: var(--color-primary);
+}
+
+/*
+ * Standalone custom primary button — gradient variant used across the app.
+ * class="btn btn-primary-custom"
+ */
+.btn-primary-custom {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: white;
+  border: none;
+  font-weight: 500;
+  padding: 0.5rem 1.25rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease-in-out;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-primary-custom:hover, .btn-primary-custom:focus {
+  background: linear-gradient(135deg, var(--color-primary-dark), #047857);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary-custom:active {
+  transform: translateY(0);
+}
+
+/* Custom Cards */
+.card-custom {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+
+/* Table Enhancements */
+.table-hover tbody tr {
+  transition: background-color 0.15s ease;
+}
+.table-hover tbody tr:hover {
+  background-color: #f1f5f9;
+}
+.table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--color-secondary);
+  border-bottom: 2px solid var(--color-border);
+  background-color: #f8fafc;
+}
+
+/* Offcanvas custom transition */
+.offcanvas {
+  border-radius: 1rem 0 0 1rem;
+  box-shadow: -5px 0 25px rgba(0,0,0,0.05);
+}
+
+/* Form controls */
+.form-control, .form-select {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 0.25rem rgba(16, 185, 129, 0.25);
+}
+
+/* Status Badges Extends */
+.badge {
+  padding: 0.4em 0.65em;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Auth Tabs Overrides */
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link {
+  background-color: var(--color-primary);
+  color: white;
+}
+.nav-pills .nav-link {
+  color: var(--color-secondary);
+}
+
+/* ========================================================================= */
+/* Layout & Sidebar Styling                                                  */
+/* ========================================================================= */
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+app-root {
+  display: block;
+  min-height: 100vh;
+  width: 100%;
+}
+
+app-main-layout {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  flex-direction: column;
+}
+
+/* Ensure page-header host element is always a full-width block container */
+app-page-header {
+  display: block;
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  app-main-layout {
+    flex-direction: row;
+  }
+}
+
+.app-sidebar {
+  width: 260px;
+  background-color: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.app-main-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Sidebar Nav Links */
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  color: var(--color-text-main);
+  text-decoration: none;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin: 0.25rem 0.75rem;
+  border-radius: var(--radius-md);
+}
+
+.sidebar-nav-link:hover {
+  background-color: var(--color-background);
+  color: var(--color-primary);
+}
+
+.sidebar-nav-link.active {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.sidebar-nav-link i {
+  font-size: 1.25rem;
+}
+
+.sidebar-nav-link.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Profile Bubble */
+.profile-bubble {
+  padding: 0.5rem;
+  border-radius: var(--radius-lg);
+  transition: background-color 0.2s ease;
+  align-items: center;
+}
+.profile-bubble:hover {
+  background-color: var(--color-background);
+}
+.profile-icon {
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-right: 0.75rem;
+  font-size: 1.2rem;
+}
+
+/* Mobile Menu */
+.mobile-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1040;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease;
+}
+
+.mobile-menu-backdrop.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.mobile-menu-panel {
+  position: fixed;
+  top: 0;
+  left: -280px;
+  width: 280px;
+  height: 100vh;
+  background-color: var(--color-surface);
+  z-index: 1050;
+  transition: left 0.3s ease;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu-panel.show {
+  left: 0;
+}
+
+/* ========================================================================= */
+/* Custom Text Utilities                                                     */
+/* ========================================================================= */
+
+.text-secondary-custom {
+  color: var(--color-text-secondary) !important;
+}
+
+.text-danger-custom {
+  color: var(--color-danger) !important;
+}
+
+/* ========================================================================= */
+/* Additional Custom Utilities                                               */
+/* ========================================================================= */
+
+.hover-shadow {
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+.hover-shadow:hover {
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-2px);
+}
+
+.search-box {
+  min-width: 250px;
+  border-radius: 20px;
+  padding-left: 1rem;
+}
+
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+
+/* Skeleton Loaders */
+.skeleton {
+  background: #e2e8f0;
+  background: linear-gradient(110deg, #ececec 8%, #f5f5f5 18%, #ececec 33%);
+  border-radius: 5px;
+  background-size: 200% 100%;
+  animation: 1.5s shine linear infinite;
+}
+.skeleton-loader {
+  width: 100%;
+  height: 20px;
+  display: inline-block;
+}
+@keyframes shine {
+  to {
+    background-position-x: -200%;
+  }
+}

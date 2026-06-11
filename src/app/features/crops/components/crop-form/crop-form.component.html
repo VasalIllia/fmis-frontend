@@ -1,0 +1,238 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ cropId ? 'Редагувати посів' : 'Створити новий посів' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <form [formGroup]="cropForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Name -->
+        <div>
+          <label for="cropName" class="form-label fw-semibold">Назва посіву / Поля <span class="text-danger">*</span></label>
+          <input
+            type="text"
+            id="cropName"
+            class="form-control"
+            formControlName="name"
+            placeholder="Наприклад: Поле №3 - Пшениця Озима"
+            [class.is-invalid]="cropForm.get('name')?.touched && cropForm.get('name')?.invalid"
+          />
+          <div class="invalid-feedback">Назва є обов'язковою (макс. 100 символів).</div>
+        </div>
+
+        <!-- Type and Status -->
+        <div class="row">
+          <div class="col-6">
+            <label for="cropType" class="form-label fw-semibold">Культура <span class="text-danger">*</span></label>
+            <select id="cropType" class="form-select" formControlName="type">
+              <option *ngFor="let opt of typeOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label for="cropStatus" class="form-label fw-semibold">Статус посіву <span class="text-danger">*</span></label>
+            <select id="cropStatus" class="form-select" formControlName="status">
+              <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Quantity and Unit -->
+        <div class="row">
+          <div class="col-6">
+            <label for="cropQty" class="form-label fw-semibold">Площа / Кількість <span class="text-danger">*</span></label>
+            <input
+              type="number"
+              id="cropQty"
+              class="form-control"
+              formControlName="quantity"
+              min="0.001"
+              step="any"
+              [class.is-invalid]="cropForm.get('quantity')?.touched && cropForm.get('quantity')?.invalid"
+            />
+            <div class="invalid-feedback">Площа повинна бути більше 0.</div>
+          </div>
+          <div class="col-6">
+            <label for="cropUnit" class="form-label fw-semibold">Одиниця виміру <span class="text-danger">*</span></label>
+            <select id="cropUnit" class="form-select" formControlName="unit">
+              <option *ngFor="let opt of unitOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Location Dropdown with Inline Add -->
+        <div>
+          <label for="locationId" class="form-label fw-semibold">Локація / Ділянка</label>
+          <div class="input-group">
+            <select id="locationId" class="form-select" formControlName="locationId">
+              <option [ngValue]="null">Без локації (Не вказано)</option>
+              <option *ngFor="let loc of locations()" [value]="loc.id">
+                {{ loc.name }}
+              </option>
+            </select>
+            <button
+              type="button"
+              class="btn btn-outline-success"
+              (click)="openLocationModal()"
+              title="Додати нову локацію"
+            >
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+          <div class="mt-2 d-flex justify-content-between align-items-center" *ngIf="hasMoreLocations()">
+            <span class="text-muted" style="font-size: 0.8rem;">
+              Показано: {{ locations().length }} локацій
+            </span>
+            <button
+              type="button"
+              class="btn btn-link btn-sm text-success p-0 text-decoration-none fw-semibold"
+              (click)="loadMoreLocations()"
+              [disabled]="loadingMoreLocations()"
+            >
+              <span *ngIf="loadingMoreLocations()" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              Завантажити ще 10...
+            </button>
+          </div>
+        </div>
+
+        <!-- Sowing & Expected Harvest Dates -->
+        <div class="row">
+          <div class="col-6">
+            <label for="sowingDate" class="form-label fw-semibold">Дата посіву <span class="text-danger">*</span></label>
+            <input
+              type="date"
+              id="sowingDate"
+              class="form-control"
+              formControlName="sowingDate"
+              [class.is-invalid]="cropForm.get('sowingDate')?.touched && cropForm.get('sowingDate')?.invalid"
+            />
+            <div class="invalid-feedback">Дата посіву є обов'язковою.</div>
+          </div>
+          <div class="col-6">
+            <label for="expectedHarvestDate" class="form-label fw-semibold">Очікуваний врожай <span class="text-danger">*</span></label>
+            <input
+              type="date"
+              id="expectedHarvestDate"
+              class="form-control"
+              formControlName="expectedHarvestDate"
+              [class.is-invalid]="cropForm.get('expectedHarvestDate')?.touched && cropForm.get('expectedHarvestDate')?.invalid"
+            />
+            <div class="invalid-feedback">
+              Очікувана дата обов'язкова та не може бути раніше посіву.
+            </div>
+          </div>
+        </div>
+
+        <!-- Planting and Harvesting Flags -->
+        <div class="d-flex gap-4 my-2">
+          <div class="form-check">
+            <input type="checkbox" id="isPlanted" class="form-check-input" formControlName="isPlanted" />
+            <label for="isPlanted" class="form-check-label fw-semibold">Посаджено (Фізично)</label>
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="isHarvested" class="form-check-input" formControlName="isHarvested" />
+            <label for="isHarvested" class="form-check-label fw-semibold">Врожай зібрано</label>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Опис / Нотатки про посів</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="3"
+            placeholder="Сорт, умови, особливості обробки..."
+          ></textarea>
+        </div>
+
+        <!-- Reminder Checkbox -->
+        <div class="form-check mt-3 mb-2" *ngIf="!cropId">
+          <input type="checkbox" id="createTaskAndNotification" class="form-check-input" formControlName="createTaskAndNotification" />
+          <label for="createTaskAndNotification" class="form-check-label fw-semibold text-success">
+            Створити нагадування про планований збір врожаю в планувальнику
+          </label>
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="cropForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Nested Add Location Modal -->
+<div *ngIf="isLocationModalOpen()" class="modal fade show d-block" tabindex="-1" style="background: rgba(34, 48, 37, 0.55); z-index: 1060; backdrop-filter: blur(2px);">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold">Нова локація посівів</h5>
+        <button type="button" class="btn-close" (click)="closeLocationModal()"></button>
+      </div>
+      <form [formGroup]="locationForm" (ngSubmit)="onSubmitLocation()">
+        <div class="modal-body py-4">
+          <div class="mb-3">
+            <label for="newLocName" class="form-label fw-medium">Назва локації <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              id="newLocName"
+              class="form-control"
+              formControlName="name"
+              placeholder="Наприклад: Поле 5"
+              [class.is-invalid]="locationForm.get('name')?.touched && locationForm.get('name')?.invalid"
+            />
+            <div class="invalid-feedback">Назва локації є обов'язковою.</div>
+          </div>
+          <div class="mb-0">
+            <label for="newLocDesc" class="form-label fw-medium">Опис</label>
+            <textarea
+              id="newLocDesc"
+              class="form-control"
+              formControlName="description"
+              rows="3"
+              placeholder="Опис локації..."
+            ></textarea>
+          </div>
+        </div>
+        <footer class="modal-footer border-top">
+          <button type="button" class="btn btn-outline-secondary" (click)="closeLocationModal()" [disabled]="submittingLocation()">Скасувати</button>
+          <button type="submit" class="btn btn-success d-flex align-items-center gap-2" [disabled]="locationForm.invalid || submittingLocation()">
+            <span *ngIf="submittingLocation()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Створити
+          </button>
+        </footer>
+      </form>
+    </div>
+  </div>
+</div>

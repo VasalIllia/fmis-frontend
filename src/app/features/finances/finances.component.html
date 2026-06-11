@@ -1,0 +1,445 @@
+<div class="container-fluid p-0">
+  <div class="mb-4">
+    <a
+      routerLink="/overview"
+      class="text-decoration-none"
+      style="color: var(--color-primary); font-weight: 500"
+    >
+      <i class="bi bi-arrow-left"></i> Повернутися на головну
+    </a>
+  </div>
+
+  <!-- Header -->
+  <app-page-header title="Фінанси" subtitle="Облік доходів, витрат та фінансового балансу ферми">
+    <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+      <i
+        class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+      ></i>
+      <input
+        type="text"
+        class="form-control ps-5"
+        placeholder="Пошук за назвою..."
+        [value]="filterForm.get('Search')?.value || ''"
+        (input)="onSearchInputChange($event)"
+      />
+    </div>
+    <button
+      class="btn btn-outline-secondary d-flex align-items-center gap-2"
+      (click)="toggleFilters()"
+    >
+      <i class="bi bi-funnel"></i> Фільтри
+    </button>
+    <button
+      class="btn btn-primary-custom d-flex align-items-center gap-2"
+      (click)="openCreateDrawer()"
+    >
+      <i class="bi bi-plus-lg"></i> Додати операцію
+    </button>
+  </app-page-header>
+
+  <!-- Balance Summary Cards -->
+  <section class="row g-3 mb-4" aria-label="Баланс">
+    <!-- Income Card -->
+    <div class="col-md-4">
+      <article class="card-custom p-4 border-start border-4 border-success shadow-sm">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span
+              class="text-secondary fw-semibold mb-1 d-block"
+              style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px"
+              >Усього доходів</span
+            >
+            <h3 class="fw-bold text-success mb-0">+{{ totalIncome() | number: '1.2-2' }} ₴</h3>
+          </div>
+          <div class="bg-success bg-opacity-10 p-3 rounded-circle text-success">
+            <i class="bi bi-graph-up fs-3"></i>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Expenses Card -->
+    <div class="col-md-4">
+      <article class="card-custom p-4 border-start border-4 border-danger shadow-sm">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span
+              class="text-secondary fw-semibold mb-1 d-block"
+              style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px"
+              >Усього витрат</span
+            >
+            <h3 class="fw-bold text-danger mb-0">-{{ totalExpenses() | number: '1.2-2' }} ₴</h3>
+          </div>
+          <div class="bg-danger bg-opacity-10 p-3 rounded-circle text-danger">
+            <i class="bi bi-graph-down fs-3"></i>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- Net Balance Card -->
+    <div class="col-md-4">
+      <article
+        class="card-custom p-4 border-start border-4 shadow-sm"
+        [class.border-success]="netBalance() >= 0"
+        [class.border-danger]="netBalance() < 0"
+      >
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <span
+              class="text-secondary fw-semibold mb-1 d-block"
+              style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px"
+              >Чистий баланс</span
+            >
+            <h3
+              class="fw-bold mb-0"
+              [class.text-success]="netBalance() >= 0"
+              [class.text-danger]="netBalance() < 0"
+            >
+              {{ netBalance() >= 0 ? '+' : '' }}{{ netBalance() | number: '1.2-2' }} ₴
+            </h3>
+          </div>
+          <div
+            class="p-3 rounded-circle"
+            [class.bg-success]="netBalance() >= 0"
+            [class.bg-opacity-10]="netBalance() >= 0"
+            [class.text-success]="netBalance() >= 0"
+            [class.bg-danger]="netBalance() < 0"
+            [class.bg-opacity-10]="netBalance() < 0"
+            [class.text-danger]="netBalance() < 0"
+          >
+            <i
+              class="bi fs-3"
+              [class.bi-wallet2]="netBalance() >= 0"
+              [class.bi-credit-card-2-front]="netBalance() < 0"
+            ></i>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <div class="row">
+    <!-- Main Content Column -->
+    <main class="col-12">
+      <!-- Loading State -->
+      <app-loading-spinner *ngIf="loading(); else contentTpl" />
+
+      <ng-template #contentTpl>
+        <!-- Empty State (No items at all on farm) -->
+        <app-empty-state
+          *ngIf="records().length === 0 && !hasActiveFilters()"
+          icon="bi-credit-card"
+          title="Транзакцій не знайдено"
+          message="Додайте першу фінансову операцію для обліку доходів та витрат."
+          actionLabel="Додати операцію"
+          (action)="openCreateDrawer()"
+        />
+
+        <!-- Empty State (Filtered result empty) -->
+        <app-empty-state
+          *ngIf="records().length === 0 && hasActiveFilters()"
+          icon="bi-funnel"
+          title="За фільтрами нічого не знайдено"
+          message="Спробуйте змінити або очистити фільтри пошуку."
+          actionLabel="Очистити фільтри"
+          (action)="clearFilters()"
+        />
+
+        <!-- Records List -->
+        <div *ngIf="records().length > 0">
+          <!-- Desktop Table View -->
+          <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Тип</th>
+                    <th>Категорія</th>
+                    <th>Модуль</th>
+                    <th>Сума</th>
+                    <th>Дата</th>
+                    <th>Опис</th>
+                    <th class="text-end pe-4">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let rec of records()">
+                    <td class="ps-4">
+                      <span
+                        class="badge d-inline-flex align-items-center gap-1"
+                        [class.bg-success-subtle]="rec.kind === 'Income'"
+                        [class.text-success]="rec.kind === 'Income'"
+                        [class.bg-danger-subtle]="rec.kind === 'Expense'"
+                        [class.text-danger]="rec.kind === 'Expense'"
+                      >
+                        <i
+                          class="bi"
+                          [class.bi-plus-lg]="rec.kind === 'Income'"
+                          [class.bi-dash-lg]="rec.kind === 'Expense'"
+                        ></i>
+                        {{ rec.kind === 'Income' ? 'Дохід' : 'Витрата' }}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{{ getTypeLabel(rec.type) }}</strong>
+                    </td>
+                    <td>
+                      <span class="text-dark">{{ getModuleLabel(rec.moduleType) }}</span>
+                    </td>
+                    <td>
+                      <strong
+                        [class.text-success]="rec.kind === 'Income'"
+                        [class.text-danger]="rec.kind === 'Expense'"
+                      >
+                        {{ rec.amount | number: '1.2-2' }} ₴
+                      </strong>
+                    </td>
+                    <td>{{ rec.occurredAt | date: 'yyyy-MM-dd' }}</td>
+                    <td class="text-secondary">{{ rec.description || '—' }}</td>
+                    <td class="text-end pe-4">
+                      <div class="d-inline-flex gap-2">
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="openEditDrawer(rec.id)"
+                          title="Редагувати"
+                        >
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="confirmDelete(rec)"
+                          title="Вилучити"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Cards Layout -->
+          <div class="d-md-none d-flex flex-column gap-3">
+            <article class="card-custom p-3 shadow-sm" *ngFor="let rec of records()">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span
+                  class="badge d-inline-flex align-items-center gap-1"
+                  [class.bg-success-subtle]="rec.kind === 'Income'"
+                  [class.text-success]="rec.kind === 'Income'"
+                  [class.bg-danger-subtle]="rec.kind === 'Expense'"
+                  [class.text-danger]="rec.kind === 'Expense'"
+                >
+                  <i
+                    class="bi"
+                    [class.bi-plus-lg]="rec.kind === 'Income'"
+                    [class.bi-dash-lg]="rec.kind === 'Expense'"
+                  ></i>
+                  {{ rec.kind === 'Income' ? 'Дохід' : 'Витрата' }}
+                </span>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-secondary small">{{
+                    rec.occurredAt | date: 'yyyy-MM-dd'
+                  }}</span>
+                  <div class="dropdown">
+                    <button
+                      class="btn btn-link text-muted p-0"
+                      type="button"
+                      (click)="toggleMobileMenu(rec.id, $event)"
+                    >
+                      <i class="bi bi-three-dots-vertical" style="font-size: 1.1rem"></i>
+                    </button>
+                    <ul
+                      class="dropdown-menu dropdown-menu-end"
+                      [class.show]="activeMobileMenuId() === rec.id"
+                      style="right: 0; left: auto"
+                      (click)="$event.stopPropagation()"
+                    >
+                      <li>
+                        <button
+                          class="dropdown-item"
+                          (click)="toggleExpandRecord(rec.id, $event); activeMobileMenuId.set(null)"
+                        >
+                          <i class="bi bi-eye me-2"></i> Деталі
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          class="dropdown-item"
+                          (click)="openEditDrawer(rec.id); activeMobileMenuId.set(null)"
+                        >
+                          <i class="bi bi-pencil me-2"></i> Редагувати
+                        </button>
+                      </li>
+                      <li><hr class="dropdown-divider" /></li>
+                      <li>
+                        <button
+                          class="dropdown-item text-danger"
+                          (click)="confirmDelete(rec); activeMobileMenuId.set(null)"
+                        >
+                          <i class="bi bi-trash me-2"></i> Видалити
+                        </button>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-baseline mb-2">
+                <h6 class="fw-bold text-dark mb-0" style="font-size: 0.95rem">
+                  {{ getTypeLabel(rec.type) }}
+                </h6>
+                <strong
+                  class="fs-6"
+                  [class.text-success]="rec.kind === 'Income'"
+                  [class.text-danger]="rec.kind === 'Expense'"
+                >
+                  {{ rec.kind === 'Income' ? '+' : '-' }}{{ rec.amount | number: '1.2-2' }} ₴
+                </strong>
+              </div>
+
+              <div
+                class="mb-3 text-secondary small"
+                *ngIf="rec.description"
+                [style.max-height]="expandedRecordId() === rec.id ? 'none' : '40px'"
+                [style.overflow]="expandedRecordId() === rec.id ? 'visible' : 'hidden'"
+                [style.display]="expandedRecordId() === rec.id ? 'block' : '-webkit-box'"
+                [style.-webkit-line-clamp]="expandedRecordId() === rec.id ? 'unset' : '2'"
+                [style.-webkit-box-orient]="expandedRecordId() === rec.id ? 'unset' : 'vertical'"
+                style="font-size: 0.85rem"
+              >
+                {{ rec.description }}
+              </div>
+              <div
+                class="mb-2 text-secondary small p-2 bg-light rounded"
+                *ngIf="expandedRecordId() === rec.id"
+                style="font-size: 0.8rem"
+              >
+                <div><strong>Категорія:</strong> {{ getTypeLabel(rec.type) }}</div>
+                <div><strong>Модуль:</strong> {{ getModuleLabel(rec.moduleType) }}</div>
+              </div>
+
+              <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <span class="badge bg-light text-dark border" style="font-size: 0.75rem">{{
+                  getModuleLabel(rec.moduleType)
+                }}</span>
+              </div>
+            </article>
+          </div>
+
+          <!-- Pagination -->
+          <app-pagination
+            [pageNumber]="pageNumber()"
+            [totalPages]="totalPages()"
+            [totalCount]="totalCount()"
+            (pageChange)="changePage($event)"
+          />
+        </div>
+      </ng-template>
+      <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+      <div
+        class="offcanvas offcanvas-end shadow-sm"
+        [class.show]="showFilters()"
+        tabindex="-1"
+        style="z-index: 1045"
+      >
+        <div class="offcanvas-header border-bottom">
+          <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+          <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+        </div>
+        <div class="offcanvas-body p-4">
+          <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+            <!-- Kind -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Тип</label
+              >
+              <select class="form-select" formControlName="Kind">
+                <option [ngValue]="null">Всі</option>
+                <option value="Income">Доходи</option>
+                <option value="Expense">Витрати</option>
+              </select>
+            </div>
+            <!-- Module Type -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Модуль</label
+              >
+              <select class="form-select" formControlName="ModuleType">
+                <option [ngValue]="null">Всі модулі</option>
+                <option *ngFor="let opt of moduleOptions" [value]="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </div>
+            <!-- Year -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Рік транзакції</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                placeholder="2026"
+                formControlName="Year"
+                [readonly]="filterForm.get('IncludeAllYears')?.value"
+                [class.bg-light]="filterForm.get('IncludeAllYears')?.value"
+              />
+            </div>
+            <!-- Include All Years -->
+            <div class="form-check">
+              <input
+                type="checkbox"
+                id="includeAll"
+                class="form-check-input"
+                formControlName="IncludeAllYears"
+              />
+              <label
+                for="includeAll"
+                class="form-check-label text-secondary fw-semibold"
+                style="font-size: 0.85rem"
+              >
+                За весь час
+              </label>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Filter Backdrop -->
+      <div
+        class="offcanvas-backdrop fade show"
+        *ngIf="showFilters()"
+        (click)="toggleFilters()"
+        style="z-index: 1040"
+      ></div>
+    </main>
+  </div>
+
+  <!-- Drawers & Modals -->
+
+  <!-- Form Drawer -->
+  <app-finance-form
+    *ngIf="isFormDrawerOpen()"
+    [recordId]="editingRecordId()"
+    (close)="closeCreateDrawer()"
+    (saved)="onRecordSaved()"
+  ></app-finance-form>
+
+  <!-- Delete Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Вилучити фінансову операцію"
+    [message]="
+      'Ви дійсно бажаєте видалити фінансову операцію на суму <strong>' +
+      (recordToDelete()?.amount | number: '1.2-2') +
+      ' ₴</strong>?'
+    "
+    alertMessage="<strong>Увага!</strong> Видалення фінансових записів, які були автоматично згенеровані під час продажу продукції або врожаїв, може призвести до невідповідності даних в інших реєстрах обліку ферми!"
+    [submitting]="submittingDelete()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+</div>

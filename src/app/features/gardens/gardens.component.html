@@ -1,0 +1,349 @@
+<div class="container-fluid p-0">
+  <div class="mb-4">
+    <a
+      routerLink="/overview"
+      class="text-decoration-none"
+      style="color: var(--color-primary); font-weight: 500"
+    >
+      <i class="bi bi-arrow-left"></i> Повернутися на головну
+    </a>
+  </div>
+
+  <!-- Header -->
+  <app-page-header title="Садівництво" subtitle="Керування садовими культурами, кущами та деревами">
+    <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+      <i
+        class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+      ></i>
+      <input
+        type="text"
+        class="form-control ps-5"
+        placeholder="Пошук за назвою..."
+        [value]="filterForm.get('Search')?.value || ''"
+        (input)="onSearchInputChange($event)"
+      />
+    </div>
+    <a
+      routerLink="/gardens/locations"
+      class="btn btn-outline-success d-flex align-items-center gap-2"
+    >
+      <i class="bi bi-geo-alt"></i> Локації садів
+    </a>
+    <a
+      routerLink="/gardens/harvests"
+      class="btn btn-outline-success d-flex align-items-center gap-2"
+    >
+      <i class="bi bi-gift"></i> Збір фруктів / ягід
+    </a>
+    <button
+      class="btn btn-outline-secondary d-flex align-items-center gap-2"
+      (click)="toggleFilters()"
+    >
+      <i class="bi bi-funnel"></i> Фільтри
+    </button>
+    <button
+      class="btn btn-primary-custom d-flex align-items-center gap-2"
+      (click)="openCreateDrawer()"
+    >
+      <i class="bi bi-plus-lg"></i> Додати посадку
+    </button>
+  </app-page-header>
+
+  <div class="row">
+    <!-- Main Content Column -->
+    <main class="col-12">
+      <!-- Loading State -->
+      <app-loading-spinner *ngIf="loading(); else contentTpl" />
+
+      <ng-template #contentTpl>
+        <!-- Empty State (No items at all on farm) -->
+        <app-empty-state
+          *ngIf="gardens().length === 0 && !hasActiveFilters()"
+          icon="bi-tree"
+          title="Жодної посадки не знайдено"
+          message="Додайте нову посадку для обліку садових культур, дерев та кущів."
+          actionLabel="Додати першу посадку"
+          (action)="openCreateDrawer()"
+        />
+
+        <!-- Empty State (Filtered result empty) -->
+        <app-empty-state
+          *ngIf="gardens().length === 0 && hasActiveFilters()"
+          icon="bi-funnel"
+          title="За фільтрами нічого не знайдено"
+          message="Спробуйте змінити або очистити фільтри пошуку."
+          actionLabel="Очистити фільтри"
+          (action)="clearFilters()"
+        />
+
+        <!-- Gardens List -->
+        <div *ngIf="gardens().length > 0">
+          <!-- Desktop Table View -->
+          <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Назва посадки</th>
+                    <th>Культура</th>
+                    <th>Кількість</th>
+                    <th>Локація</th>
+                    <th>Дата посадки</th>
+                    <th>Очікуваний збір</th>
+                    <th>Статус</th>
+                    <th class="text-end pe-4">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let g of gardens()">
+                    <td class="ps-4">
+                      <a
+                        [routerLink]="[g.id]"
+                        class="fw-semibold text-success text-decoration-none"
+                      >
+                        {{ g.name }}
+                      </a>
+                    </td>
+                    <td>{{ getTypeLabel(g.type) }}</td>
+                    <td>
+                      <strong>{{ g.quantity }}</strong>
+                      <span class="text-muted ms-1">{{ getUnitLabel(g.unit) }}</span>
+                    </td>
+                    <td>{{ getLocationName(g.locationId) }}</td>
+                    <td>{{ g.plantingDate | date: 'yyyy-MM-dd' }}</td>
+                    <td>{{ g.expectedHarvestDate | date: 'yyyy-MM-dd' }}</td>
+                    <td>
+                      <span [ngClass]="getStatusClass(g.status)">
+                        {{ getStatusLabel(g.status) }}
+                      </span>
+                    </td>
+                    <td class="text-end pe-4">
+                      <div class="d-inline-flex gap-2">
+                        <a
+                          [routerLink]="[g.id]"
+                          class="btn btn-sm btn-outline-success"
+                          title="Деталі"
+                        >
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="openEditDrawer(g.id)"
+                          title="Змінити"
+                        >
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="confirmDelete(g)"
+                          title="Вилучити"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Cards Layout -->
+          <div class="d-md-none d-flex flex-column gap-3">
+            <article class="card-custom p-3 shadow-sm" *ngFor="let g of gardens()">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <a
+                    [routerLink]="[g.id]"
+                    class="h5 fw-bold text-success text-decoration-none d-block mb-1"
+                  >
+                    {{ g.name }}
+                  </a>
+                  <span class="badge bg-light text-dark border me-1" style="font-size: 0.8rem">
+                    {{ getTypeLabel(g.type) }}
+                  </span>
+                  <span class="text-muted" style="font-size: 0.85rem">
+                    {{ g.quantity }} {{ getUnitLabel(g.unit) }}
+                  </span>
+                </div>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-link text-muted p-0"
+                    type="button"
+                    (click)="toggleMobileMenu(g.id, $event)"
+                  >
+                    <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                  </button>
+                  <ul
+                    class="dropdown-menu dropdown-menu-end"
+                    [class.show]="activeMobileMenuId() === g.id"
+                    style="right: 0; left: auto"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        [routerLink]="[g.id]"
+                        (click)="activeMobileMenuId.set(null)"
+                        ><i class="bi bi-eye me-2"></i> Деталі</a
+                      >
+                    </li>
+                    <li>
+                      <button
+                        class="dropdown-item"
+                        (click)="openEditDrawer(g.id); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-pencil me-2"></i> Змінити
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <button
+                        class="dropdown-item text-danger"
+                        (click)="confirmDelete(g); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-trash me-2"></i> Видалити
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="row g-2 pt-2 border-top" style="font-size: 0.85rem">
+                <div class="col-6">
+                  <strong>Локація:</strong> {{ getLocationName(g.locationId) }}
+                </div>
+                <div class="col-6">
+                  <strong>Статус:</strong>
+                  <span [ngClass]="getStatusClass(g.status)">{{ getStatusLabel(g.status) }}</span>
+                </div>
+                <div class="col-6">
+                  <strong>Посадка:</strong> {{ g.plantingDate | date: 'yyyy-MM-dd' }}
+                </div>
+                <div class="col-6">
+                  <strong>Збір:</strong> {{ g.expectedHarvestDate | date: 'yyyy-MM-dd' }}
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- Pagination -->
+          <app-pagination
+            [pageNumber]="pageNumber()"
+            [totalPages]="totalPages()"
+            [totalCount]="totalCount()"
+            (pageChange)="changePage($event)"
+          />
+        </div>
+      </ng-template>
+
+      <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+      <div
+        class="offcanvas offcanvas-end shadow-sm"
+        [class.show]="showFilters()"
+        tabindex="-1"
+        style="z-index: 1045"
+      >
+        <div class="offcanvas-header border-bottom">
+          <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+          <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+        </div>
+        <div class="offcanvas-body p-4">
+          <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+            <!-- Location -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Локація</label
+              >
+              <select class="form-select" formControlName="LocationId">
+                <option [ngValue]="null">Всі локації</option>
+                <option *ngFor="let loc of locations()" [value]="loc.id">{{ loc.name }}</option>
+              </select>
+            </div>
+            <!-- Type -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Культура</label
+              >
+              <select class="form-select" formControlName="Type">
+                <option [ngValue]="null">Всі типи</option>
+                <option *ngFor="let t of typeOptions" [value]="t.value">{{ t.label }}</option>
+              </select>
+            </div>
+            <!-- Status -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Статус</label
+              >
+              <select class="form-select" formControlName="Status">
+                <option [ngValue]="null">Всі статуси</option>
+                <option *ngFor="let st of statusOptions" [value]="st.value">{{ st.label }}</option>
+              </select>
+            </div>
+            <!-- Year -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Рік посадки</label
+              >
+              <input
+                type="number"
+                class="form-control"
+                placeholder="2026"
+                formControlName="Year"
+                [readonly]="filterForm.get('IncludeAllYears')?.value"
+                [class.bg-light]="filterForm.get('IncludeAllYears')?.value"
+              />
+            </div>
+            <div class="form-check">
+              <input
+                type="checkbox"
+                id="includeAll"
+                class="form-check-input"
+                formControlName="IncludeAllYears"
+              />
+              <label
+                for="includeAll"
+                class="form-check-label text-secondary fw-semibold"
+                style="font-size: 0.85rem"
+              >
+                За весь час
+              </label>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Filter Backdrop -->
+      <div
+        class="offcanvas-backdrop fade show"
+        *ngIf="showFilters()"
+        (click)="toggleFilters()"
+        style="z-index: 1040"
+      ></div>
+    </main>
+  </div>
+
+  <!-- Drawers & Modals -->
+
+  <!-- Form Drawer -->
+  <app-garden-form
+    *ngIf="isFormDrawerOpen()"
+    [gardenId]="editingGardenId()"
+    (close)="closeCreateDrawer()"
+    (saved)="onGardenSaved()"
+  ></app-garden-form>
+
+  <!-- Delete Confirmation Modal -->
+  <app-confirm-modal
+    [isOpen]="isDeleteConfirmOpen()"
+    title="Вилучити посадку"
+    [message]="
+      'Ви дійсно бажаєте видалити посадку <strong>' + (gardenToDelete()?.name || '') + '</strong>?'
+    "
+    warning="Це також вилучить всю історію збору врожаю з цієї ділянки!"
+    confirmText="Видалити"
+    [submitting]="submittingDelete()"
+    (confirm)="onDelete()"
+    (cancel)="closeDeleteConfirm()"
+  />
+</div>

@@ -1,0 +1,161 @@
+<!-- Drawer Panel -->
+<div
+  class="offcanvas offcanvas-end show shadow-lg"
+  tabindex="-1"
+  style="visibility: visible; background: var(--color-surface); z-index: 1050; border-left: 1px solid var(--color-border); width: min(100vw, 520px);"
+>
+  <div class="offcanvas-header border-bottom">
+    <h5 class="offcanvas-title fw-bold text-dark">
+      {{ harvestId ? 'Редагувати врожай' : 'Зареєструвати збір врожаю' }}
+    </h5>
+    <button type="button" class="btn-close" (click)="close.emit()" [disabled]="submitting()"></button>
+  </div>
+
+  <div class="offcanvas-body">
+    <div *ngIf="loading(); else formTpl" class="text-center py-5">
+      <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Завантаження...</span>
+      </div>
+    </div>
+
+    <ng-template #formTpl>
+      <!-- Context Crop Preview -->
+      <div class="alert alert-success border-0 bg-success-subtle text-success-emphasis mb-4" *ngIf="selectedCrop">
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <i class="bi bi-info-circle-fill"></i>
+          <strong class="text-success-emphasis">Вибраний посів:</strong>
+          <span>{{ selectedCrop.name }}</span>
+        </div>
+        <div style="font-size: 0.85rem;">
+          Культура: <strong>{{ getTypeLabel(selectedCrop.type) }}</strong> · 
+          Посівна площа: <strong>{{ selectedCrop.quantity }} {{ getUnitLabel(selectedCrop.unit) }}</strong>
+        </div>
+      </div>
+
+      <form [formGroup]="harvestForm" (ngSubmit)="onSubmit()" class="d-flex flex-column gap-3 h-100">
+        <!-- Crop Select (if not in context) -->
+        <div *ngIf="!selectedCrop">
+          <label for="cropId" class="form-label fw-semibold">Виберіть посів / поле <span class="text-danger">*</span></label>
+          <div class="dropdown" [class.is-invalid]="harvestForm.get('cropId')?.touched && harvestForm.get('cropId')?.invalid">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center bg-white" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6;" [class.border-danger]="harvestForm.get('cropId')?.touched && harvestForm.get('cropId')?.invalid">
+              <span class="text-truncate">{{ getSelectedCropName() || 'Оберіть посів...' }}</span>
+            </button>
+            <ul class="dropdown-menu w-100 shadow-sm" style="max-height: 250px; overflow-y: auto;">
+              <li>
+                <a class="dropdown-item" href="javascript:void(0)" (click)="harvestForm.patchValue({cropId: null})">
+                  <span class="text-muted">Оберіть посів...</span>
+                </a>
+              </li>
+              <li *ngIf="activeCrops().length > 0"><hr class="dropdown-divider"></li>
+              <li *ngFor="let c of activeCrops()">
+                <a class="dropdown-item" href="javascript:void(0)" (click)="harvestForm.patchValue({cropId: c.id})" [class.active]="harvestForm.get('cropId')?.value === c.id">
+                  {{ c.name }} · {{ getTypeLabel(c.type) }} ({{ c.sowingDate | date:'yyyy' }})
+                </a>
+              </li>
+              <li *ngIf="hasMoreCrops()">
+                <hr class="dropdown-divider">
+                <div class="px-2 py-1">
+                  <button type="button" class="btn btn-sm btn-light text-success w-100 fw-semibold d-flex justify-content-center align-items-center" (click)="loadMoreCrops(); $event.stopPropagation()" [disabled]="loadingMoreCrops()">
+                    <span *ngIf="loadingMoreCrops()" class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Завантажити ще 10...
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </div>
+          <div class="invalid-feedback">Вибір посіву є обов'язковим.</div>
+        </div>
+
+        <!-- Quantity and Unit -->
+        <div class="row">
+          <div class="col-6">
+            <label for="quantity" class="form-label fw-semibold">Зібрана кількість <span class="text-danger">*</span></label>
+            <input
+              type="number"
+              id="quantity"
+              class="form-control"
+              formControlName="quantity"
+              min="0.001"
+              step="any"
+              [class.is-invalid]="harvestForm.get('quantity')?.touched && harvestForm.get('quantity')?.invalid"
+            />
+            <div class="invalid-feedback">Кількість повинна бути більше 0.</div>
+          </div>
+          <div class="col-6">
+            <label for="unit" class="form-label fw-semibold">Одиниця виміру <span class="text-danger">*</span></label>
+            <select id="unit" class="form-select" formControlName="unit">
+              <option *ngFor="let opt of unitOptions" [value]="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row mt-3" *ngIf="harvestId">
+          <div class="col-12">
+            <label for="usedQuantity" class="form-label fw-semibold text-warning">Використана кількість</label>
+            <input
+              type="number"
+              id="usedQuantity"
+              class="form-control border-warning"
+              formControlName="usedQuantity"
+              min="0"
+              step="any"
+              [class.is-invalid]="harvestForm.get('usedQuantity')?.touched && harvestForm.get('usedQuantity')?.invalid"
+            />
+            <div class="form-text text-muted" style="font-size: 0.8rem;">
+              Вкажіть абсолютне значення використаної кількості (скільки всього вже було використано). Відповідно до цього значення буде перераховано залишок.
+            </div>
+            <div class="invalid-feedback">Кількість не може бути від'ємною.</div>
+          </div>
+        </div>
+
+        <!-- Harvest Date -->
+        <div>
+          <label for="harvestDate" class="form-label fw-semibold">Дата збору врожаю <span class="text-danger">*</span></label>
+          <input
+            type="date"
+            id="harvestDate"
+            class="form-control"
+            formControlName="harvestDate"
+            [class.is-invalid]="harvestForm.get('harvestDate')?.touched && harvestForm.get('harvestDate')?.invalid"
+          />
+          <div class="invalid-feedback">Дата збору є обов'язковою.</div>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label for="description" class="form-label fw-semibold">Коментарі / Якість врожаю</label>
+          <textarea
+            id="description"
+            class="form-control"
+            formControlName="description"
+            rows="4"
+            placeholder="Сорт, вологість, якість, умови зберігання..."
+          ></textarea>
+        </div>
+
+        <!-- Submit Buttons -->
+        <footer class="d-flex gap-2 mt-auto pt-4 border-top">
+          <button
+            type="button"
+            class="btn btn-outline-secondary flex-grow-1"
+            (click)="close.emit()"
+            [disabled]="submitting()"
+          >
+            Скасувати
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary-custom flex-grow-1 d-flex align-items-center justify-content-center gap-2"
+            [disabled]="harvestForm.invalid || submitting()"
+          >
+            <span *ngIf="submitting()" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            Зберегти
+          </button>
+        </footer>
+      </form>
+    </ng-template>
+  </div>
+</div>
+
+<!-- Backdrop for Drawer -->
+<div class="offcanvas-backdrop fade show" style="z-index: 1040;" (click)="close.emit()"></div>

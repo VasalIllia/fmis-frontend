@@ -1,0 +1,360 @@
+<div class="container-fluid p-0">
+  <div class="mb-4">
+    <a
+      routerLink="/overview"
+      class="text-decoration-none"
+      style="color: var(--color-primary); font-weight: 500"
+    >
+      <i class="bi bi-arrow-left"></i> Повернутися на головну
+    </a>
+  </div>
+
+  <!-- Title & Actions Header -->
+  <app-page-header title="Тварини" subtitle="Керування стадом, продукцією та спарюванням">
+    <div class="search-box position-relative" style="max-width: 250px; width: 100%">
+      <i
+        class="bi bi-search text-muted position-absolute top-50 start-0 translate-middle-y ms-3"
+      ></i>
+      <input
+        type="text"
+        class="form-control ps-5"
+        placeholder="Пошук за іменем..."
+        [value]="filterForm.get('Search')?.value || ''"
+        (input)="onSearchInputChange($event)"
+      />
+    </div>
+    <a routerLink="locations" class="btn btn-outline-success d-flex align-items-center gap-2">
+      <i class="bi bi-geo-alt"></i> Локації
+    </a>
+    <a routerLink="products" class="btn btn-outline-success d-flex align-items-center gap-2">
+      <i class="bi bi-box"></i> Продукція
+    </a>
+    <a routerLink="matings" class="btn btn-outline-success d-flex align-items-center gap-2">
+      <i class="bi bi-heart"></i> Спарювання
+    </a>
+    <button
+      class="btn btn-outline-secondary d-flex align-items-center gap-2"
+      (click)="toggleFilters()"
+    >
+      <i class="bi bi-funnel"></i> Фільтри
+    </button>
+    <button
+      class="btn btn-primary-custom d-flex align-items-center gap-2"
+      (click)="openCreateDrawer()"
+    >
+      <i class="bi bi-plus-lg"></i> Додати тварину
+    </button>
+  </app-page-header>
+
+  <div class="row">
+    <!-- Main Content Column -->
+    <main class="col-12">
+      <!-- Main Content -->
+      <div *ngIf="loading(); else contentTpl" class="card-custom p-0 overflow-hidden">
+        <!-- Skeleton Loading Rows -->
+        <div class="p-4 border-bottom skeleton-loader" *ngFor="let i of [1, 2, 3, 4]">
+          <div class="d-flex align-items-center gap-3">
+            <div class="skeleton" style="width: 40px; height: 40px; border-radius: 50%"></div>
+            <div class="flex-grow-1">
+              <div class="skeleton mb-2" style="width: 30%; height: 16px"></div>
+              <div class="skeleton" style="width: 50%; height: 12px"></div>
+            </div>
+            <div class="skeleton" style="width: 80px; height: 30px"></div>
+          </div>
+        </div>
+      </div>
+
+      <ng-template #contentTpl>
+        <!-- Empty State (No items at all on farm) -->
+        <app-empty-state
+          *ngIf="animals().length === 0 && !hasActiveFilters()"
+          icon="bi-piggy-bank"
+          title="Поки що немає тварин"
+          message="Додайте свою першу тварину на ферму для обліку її життєдіяльності."
+          actionLabel="Додати тварину"
+          (action)="openCreateDrawer()"
+        />
+
+        <!-- Empty State (Filtered result empty) -->
+        <app-empty-state
+          *ngIf="animals().length === 0 && hasActiveFilters()"
+          icon="bi-funnel"
+          title="За фільтрами нічого не знайдено"
+          message="Спробуйте змінити або очистити фільтри пошуку."
+          actionLabel="Очистити фільтри"
+          (action)="clearFilters()"
+        />
+
+        <!-- Animals Table / Cards -->
+        <div *ngIf="animals().length > 0">
+          <div class="card-custom p-0 overflow-hidden d-none d-md-block">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th class="ps-4">Назва / Кличка</th>
+                    <th>Номер бирки</th>
+                    <th>Вид</th>
+                    <th>Стать</th>
+                    <th>Статус</th>
+                    <th>Кількість</th>
+                    <th>Локація</th>
+                    <th>Нар.</th>
+                    <th class="text-end pe-4">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let animal of animals()">
+                    <td class="ps-4">
+                      <a
+                        [routerLink]="[animal.id]"
+                        class="fw-semibold text-success text-decoration-none"
+                      >
+                        {{ animal.name }}
+                      </a>
+                    </td>
+                    <td>
+                      <span
+                        class="badge bg-secondary text-white"
+                        *ngIf="animal.tagNumber; else noTag"
+                      >
+                        {{ animal.tagNumber }}
+                      </span>
+                      <ng-template #noTag><span class="text-muted">—</span></ng-template>
+                    </td>
+                    <td>{{ getSpeciesLabel(animal.species) }}</td>
+                    <td>
+                      <span [ngClass]="getSexClass(animal.sex)">
+                        {{ getSexLabel(animal.sex) }}
+                      </span>
+                    </td>
+                    <td>
+                      <span [ngClass]="getStatusClass(animal.status)">
+                        {{ getStatusLabel(animal.status) }}
+                      </span>
+                    </td>
+                    <td class="fw-semibold">{{ animal.quantity }}</td>
+                    <td>{{ getLocationName(animal.locationId) }}</td>
+                    <td class="text-secondary" style="font-size: 0.9rem">
+                      {{ animal.birthDate ? (animal.birthDate | date: 'yyyy-MM-dd') : '—' }}
+                    </td>
+                    <td class="text-end pe-4">
+                      <div class="d-inline-flex gap-2">
+                        <a
+                          [routerLink]="[animal.id]"
+                          class="btn btn-sm btn-outline-success"
+                          title="Деталі"
+                        >
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        <button
+                          class="btn btn-sm btn-outline-primary"
+                          (click)="openEditDrawer(animal.id)"
+                          title="Змінити"
+                        >
+                          <i class="bi bi-pencil"></i>
+                        </button>
+                        <button
+                          class="btn btn-sm btn-outline-danger"
+                          (click)="confirmDelete(animal)"
+                          title="Вилучити"
+                        >
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Mobile Cards Layout -->
+          <div class="d-md-none d-flex flex-column gap-3">
+            <article class="card-custom p-3" *ngFor="let animal of animals()">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <a
+                    [routerLink]="[animal.id]"
+                    class="h5 fw-bold text-success text-decoration-none d-block mb-1"
+                  >
+                    {{ animal.name }}
+                  </a>
+                  <span class="badge bg-secondary text-white me-1" *ngIf="animal.tagNumber">
+                    {{ animal.tagNumber }}
+                  </span>
+                  <span class="text-muted" style="font-size: 0.85rem"
+                    >Кількість: {{ animal.quantity }}</span
+                  >
+                </div>
+                <div class="dropdown">
+                  <button
+                    class="btn btn-link text-muted p-0"
+                    type="button"
+                    (click)="toggleMobileMenu(animal.id, $event)"
+                  >
+                    <i class="bi bi-three-dots-vertical" style="font-size: 1.25rem"></i>
+                  </button>
+                  <ul
+                    class="dropdown-menu dropdown-menu-end"
+                    [class.show]="activeMobileMenuId() === animal.id"
+                    style="right: 0; left: auto"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <li>
+                      <a
+                        class="dropdown-item"
+                        [routerLink]="[animal.id]"
+                        (click)="activeMobileMenuId.set(null)"
+                        ><i class="bi bi-eye me-2"></i> Деталі</a
+                      >
+                    </li>
+                    <li>
+                      <button
+                        class="dropdown-item"
+                        (click)="openEditDrawer(animal.id); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-pencil me-2"></i> Змінити
+                      </button>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                      <button
+                        class="dropdown-item text-danger"
+                        (click)="confirmDelete(animal); activeMobileMenuId.set(null)"
+                      >
+                        <i class="bi bi-trash me-2"></i> Видалити
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="row g-2 pt-2 border-top text-secondary" style="font-size: 0.9rem">
+                <div class="col-6"><strong>Вид:</strong> {{ getSpeciesLabel(animal.species) }}</div>
+                <div class="col-6"><strong>Стать:</strong> {{ getSexLabel(animal.sex) }}</div>
+                <div class="col-6">
+                  <strong>Статус:</strong> {{ getStatusLabel(animal.status) }}
+                </div>
+                <div class="col-6">
+                  <strong>Локація:</strong> {{ getLocationName(animal.locationId) }}
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <!-- Pagination -->
+          <app-pagination
+            [pageNumber]="pageNumber()"
+            [totalPages]="totalPages()"
+            [totalCount]="totalCount()"
+            (pageChange)="changePage($event)"
+          />
+        </div>
+      </ng-template>
+
+      <!-- Animal Form Component (Drawer) -->
+      <app-animal-form
+        *ngIf="isDrawerOpen()"
+        [animalId]="editingAnimalId()"
+        (close)="closeDrawer()"
+        (saved)="onSaved()"
+      ></app-animal-form>
+
+      <!-- Delete Confirm Modal -->
+      <app-confirm-modal
+        [isOpen]="isDeleteConfirmOpen()"
+        title="Вилучити тварину"
+        [message]="
+          'Ви впевнені, що хочете видалити тварину <strong>' +
+          (animalToDelete()?.name || '') +
+          '</strong>?<span class=\'text-danger d-block mt-2 fw-medium\'>Це також видалить її історію продукції та спарювань!</span>'
+        "
+        confirmLabel="Видалити"
+        [submitting]="submitting()"
+        (confirm)="onDelete()"
+        (cancel)="closeDeleteConfirm()"
+      />
+
+      <!-- Filter Drawer (Unified for Desktop & Mobile) -->
+      <div
+        class="offcanvas offcanvas-end shadow-sm"
+        [class.show]="showFilters()"
+        tabindex="-1"
+        style="z-index: 1045"
+      >
+        <div class="offcanvas-header border-bottom">
+          <h5 class="offcanvas-title fw-bold">Фільтрація</h5>
+          <button type="button" class="btn-close" (click)="toggleFilters()"></button>
+        </div>
+        <div class="offcanvas-body p-4">
+          <form [formGroup]="filterForm" class="d-flex flex-column gap-3">
+            <!-- Location -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Локація</label
+              >
+              <select class="form-select" formControlName="LocationId">
+                <option [ngValue]="null">Всі локації</option>
+                <option *ngFor="let loc of locations()" [value]="loc.id">{{ loc.name }}</option>
+              </select>
+            </div>
+            <!-- Species -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Вид</label
+              >
+              <select class="form-select" formControlName="Species">
+                <option [ngValue]="null">Всі види</option>
+                <option *ngFor="let spec of speciesOptions" [value]="spec.value">
+                  {{ spec.label }}
+                </option>
+              </select>
+            </div>
+            <!-- Sex -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Стать</label
+              >
+              <select class="form-select" formControlName="Sex">
+                <option [ngValue]="null">Будь-яка</option>
+                <option *ngFor="let s of sexOptions" [value]="s.value">{{ s.label }}</option>
+              </select>
+            </div>
+            <!-- Status -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Статус</label
+              >
+              <select class="form-select" formControlName="Status">
+                <option [ngValue]="null">Всі статуси</option>
+                <option *ngFor="let st of statusOptions" [value]="st.value">{{ st.label }}</option>
+              </select>
+            </div>
+            <!-- Birth Date Range -->
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Нар. з</label
+              >
+              <input type="date" class="form-control" formControlName="BirthDateFrom" />
+            </div>
+            <div>
+              <label class="form-label fw-medium text-secondary" style="font-size: 0.85rem"
+                >Нар. по</label
+              >
+              <input type="date" class="form-control" formControlName="BirthDateTo" />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Filter Backdrop -->
+      <div
+        class="offcanvas-backdrop fade show"
+        *ngIf="showFilters()"
+        (click)="toggleFilters()"
+        style="z-index: 1040"
+      ></div>
+    </main>
+  </div>
+</div>
